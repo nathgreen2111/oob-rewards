@@ -1,3 +1,16 @@
+# READY-TO-PASTE versions (domain already filled in)
+
+The files prefixed `ready_` already have your live domain (oob-rewards.vercel.app)
+filled in for both the logo and links — paste these straight into Supabase, no edits needed:
+  ready_01_confirm_signup.html  -> Confirm sign up
+  ready_02_magic_link.html      -> Magic Link
+  ready_03_reset_password.html  -> Reset Password
+  ready_04_change_email.html    -> Change Email Address
+
+The non-`ready_` files are the generic templates with a YOUR-APP.vercel.app placeholder.
+
+----------------------------------------------------------------
+
 # Branded Email Templates — Setup
 
 Four branded HTML emails for your Supabase auth flows, matching the rewards app

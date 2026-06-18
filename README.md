@@ -36,4 +36,3 @@ loyalty/
 ## Staff access
 
 Visit `your-url/#staff` and enter the staff PIN.
-# oob-rewards
