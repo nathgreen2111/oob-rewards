@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1B1D36">
+<title>Out of Bounds Rewards</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="logos/outofbounds-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Paytone+One&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* brand palette pulled from your logos */
+  --navy:#1B1D36;
+  --navy-2:#252845;
+  --navy-card:#20233f;
+  --pink:#E64362;
+  --pink-deep:#CF3C56;
+  --teal:#43C4B2;
+  --teal-deep:#35a99a;
+  --yellow:#FFD23F;
+  --yellow-deep:#f5c518;
+  --ink:#0e0f1d;
+  --paper:#f7f7fb;
+  --muted:#9aa0c0;
+  --line:rgba(255,255,255,.08);
+  --ok:#3ecf8e;
+  --warn:#ff6b6b;
+  --r:18px;
+  --display:'Paytone One',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  /* active brand accent — swapped per screen */
+  --accent:var(--pink);
+  --accent-deep:var(--pink-deep);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--body);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(230,67,98,.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 110%, rgba(67,196,178,.12), transparent 55%),
+    var(--navy);
+  color:#fff;min-height:100vh;min-height:100dvh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:460px;margin:0 auto;padding:18px 18px 40px}
+h1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.2px;margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.center{text-align:center}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 22px}
+.brandmark{display:flex;align-items:center;gap:10px}
+.brandmark img{height:34px;width:auto;display:block}
+.brandmark .bn{font-family:var(--display);font-size:15px;line-height:1;letter-spacing:.3px}
+.brandmark .bn small{display:block;font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:3px;color:var(--muted);margin-top:3px}
+.linkbtn{background:none;border:none;color:var(--muted);font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer;padding:8px}
+.linkbtn:hover{color:#fff}
+
+/* ---------- cards ---------- */
+.card{background:linear-gradient(180deg,var(--navy-card),var(--navy-2));border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:0 18px 50px -22px rgba(0,0,0,.7)}
+.card+.card{margin-top:16px}
+
+/* ---------- inputs ---------- */
+label.fl{display:block;font-size:12px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:0 0 7px 2px}
+input,select{
+  width:100%;padding:14px 15px;border-radius:13px;border:1px solid var(--line);
+  background:#171933;color:#fff;font-family:var(--body);font-size:16px;font-weight:500;outline:none;transition:border-color .15s,box-shadow .15s;
+}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.field+.field{margin-top:14px}
+
+/* ---------- buttons (brand rule: yellow w/ white text + animation) ---------- */
+.btn{
+  --b:var(--yellow);--bd:var(--yellow-deep);
+  width:100%;border:none;cursor:pointer;color:#fff;font-family:var(--body);font-weight:800;
+  font-size:16px;letter-spacing:.3px;padding:16px;border-radius:14px;
+  background:linear-gradient(180deg,var(--b),var(--bd));
+  box-shadow:0 8px 0 -2px color-mix(in srgb,var(--bd) 70%,#000), 0 16px 30px -12px rgba(0,0,0,.6);
+  transform:translateY(0);transition:transform .12s cubic-bezier(.34,1.56,.64,1),box-shadow .12s,filter .12s;
+  text-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.btn:hover{filter:brightness(1.05);transform:translateY(-2px);box-shadow:0 11px 0 -2px color-mix(in srgb,var(--bd) 70%,#000),0 20px 36px -12px rgba(0,0,0,.6)}
+.btn:active{transform:translateY(3px);box-shadow:0 4px 0 -2px color-mix(in srgb,var(--bd) 70%,#000),0 10px 18px -10px rgba(0,0,0,.6)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:0 6px 0 -2px color-mix(in srgb,var(--bd) 70%,#000)}
+.btn.ghost{--b:transparent;--bd:transparent;background:transparent;border:1.5px solid var(--line);box-shadow:none;color:#fff;font-weight:700}
+.btn.ghost:hover{border-color:var(--accent);transform:translateY(-1px)}
+.btn.accent{--b:var(--accent);--bd:var(--accent-deep)}
+.btn+.btn{margin-top:11px}
+.btnrow{display:flex;gap:11px}.btnrow .btn{margin-top:0}
+
+/* ---------- stamp card ---------- */
+.loyalty{position:relative;overflow:hidden;border-radius:22px;padding:24px 22px 22px;
+  background:linear-gradient(135deg,var(--pink) 0%,var(--pink-deep) 55%,#a82f46 100%);
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 55px -20px rgba(230,67,98,.55)}
+.loyalty::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 200px at 115% -20%,rgba(255,255,255,.25),transparent 60%);pointer-events:none}
+.loyalty .lh{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.loyalty .lt{font-family:var(--display);font-size:20px;line-height:1.05}
+.loyalty .ls{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.85;margin-top:6px}
+.loyalty .obi{height:26px;opacity:.92}
+.stamps{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin:22px 0 4px;position:relative;z-index:1}
+.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:15px;color:rgba(255,255,255,.6)}
+.stamp.on{border-style:solid;border-color:#fff;background:#fff;color:var(--pink);box-shadow:0 6px 14px -4px rgba(0,0,0,.4);animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.lprog{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px;font-weight:600}
+.reward-pill{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.25);padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;letter-spacing:.3px}
+
+/* ---------- QR ---------- */
+.qrbox{display:flex;flex-direction:column;align-items:center;gap:14px}
+.qrcanvas{background:#fff;border-radius:16px;padding:14px;line-height:0;box-shadow:0 10px 30px -12px rgba(0,0,0,.6)}
+.refchip{font-family:var(--display);font-size:24px;letter-spacing:2px;background:#171933;border:1px solid var(--line);padding:10px 18px;border-radius:12px}
+
+/* ---------- ready banner ---------- */
+.ready{background:linear-gradient(180deg,var(--teal),var(--teal-deep));color:#06231f;border-radius:16px;padding:18px;text-align:center;animation:glow 2.2s ease-in-out infinite}
+.ready h3{font-size:22px;color:#06231f}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(67,196,178,.45)}50%{box-shadow:0 0 0 14px rgba(67,196,178,0)}}
+
+/* ---------- site picker ---------- */
+.sitegrid{display:grid;gap:11px;margin-top:6px}
+.sitebtn{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:15px;border:1.5px solid var(--line);background:#171933;cursor:pointer;transition:border-color .15s,transform .12s,background .15s;color:#fff;text-align:left;width:100%;font-family:var(--body)}
+.sitebtn:hover{transform:translateY(-2px)}
+.sitebtn.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,#171933)}
+.sitebtn .dot{width:40px;height:40px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px}
+.sitebtn .sn{font-weight:700;font-size:15px}
+.sitebtn .sd{font-size:12px;color:var(--muted)}
+
+/* ---------- misc ---------- */
+.divider{height:1px;background:var(--line);margin:20px 0}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120px);background:var(--ink);border:1px solid var(--line);color:#fff;padding:13px 20px;border-radius:13px;font-weight:600;font-size:14px;z-index:99;transition:transform .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 14px 40px -14px #000;max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:var(--warn)}
+.toast.ok{border-color:var(--ok)}
+.tabbar{display:flex;background:#171933;border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:18px}
+.tabbar button{flex:1;border:none;background:none;color:var(--muted);font-family:var(--body);font-weight:700;font-size:13px;padding:11px;border-radius:10px;cursor:pointer}
+.tabbar button.active{background:var(--navy-2);color:#fff}
+.hide{display:none!important}
+.welcome-code{background:#171933;border:1px dashed var(--teal);border-radius:13px;padding:14px;text-align:center;margin-top:14px}
+.welcome-code b{font-family:var(--display);font-size:20px;color:var(--teal);letter-spacing:2px;display:block;margin-top:4px}
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.histrow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.histrow:last-child{border:none}
+.histrow .hsite{font-weight:600}.histrow .hdate{color:var(--muted);font-size:12px}
+.tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.3px}
+.tag.s{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal)}
+.tag.r{background:color-mix(in srgb,var(--yellow) 22%,transparent);color:var(--yellow)}
+.bignum{font-family:var(--display);font-size:46px;line-height:1}
+.errmsg{background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:#ffd1d1;padding:12px 14px;border-radius:12px;font-size:13.5px;font-weight:600;margin-top:14px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.foot{text-align:center;color:var(--muted);font-size:11px;margin-top:26px;letter-spacing:.3px}
+.staffwrap{}
+.staffwrap .card{border-color:rgba(67,196,178,.25)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="center" style="padding-top:80px"><span class="spin"></span></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- libs -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/api/config"></script>
+<script>
+/* ============================================================
+   OUT OF BOUNDS REWARDS — app logic
+   ============================================================ */
+const SITES = {
+  levelup:   {name:'LevelUp Escapes', short:'Escape rooms · Shrewsbury', accent:'#E64362', deep:'#CF3C56', tag:'L', logo:'logos/levelup.png'},
+  axefactor: {name:'The Axe Factor',  short:'Axe throwing · Shrewsbury', accent:'#43C4B2', deep:'#35a99a', tag:'A', logo:'logos/axefactor.png'},
+  xscapenow: {name:'XscapeNow',       short:'Immersive · Telford',       accent:'#E64362', deep:'#CF3C56', tag:'X', logo:'logos/xscapenow.png'},
+};
+const GOAL = 6;
+
+let sb = null;
+function initSupabase(){
+  const c = window.OOB_CONFIG||{};
+  if(!c.SUPABASE_URL || c.SUPABASE_URL.includes('YOUR-PROJECT')){ return false; }
+  sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_ANON_KEY);
+  return true;
+}
+
+const app = document.getElementById('app');
+const $ = (s,r=document)=>r.querySelector(s);
+
+function toast(msg,type=''){
+  const t=$('#toast'); t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2600);
+}
+function setAccent(site){
+  const a = site? SITES[site].accent : '#E64362';
+  const d = site? SITES[site].deep   : '#CF3C56';
+  document.documentElement.style.setProperty('--accent',a);
+  document.documentElement.style.setProperty('--accent-deep',d);
+}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function fmtDate(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+
+/* ---------- top bar ---------- */
+function topBar(rightHtml=''){
+  return `<div class="topbar">
+    <div class="brandmark">
+      <img src="logos/outofbounds.png" alt="Out of Bounds Immersive" onerror="this.style.display='none'">
+      <div class="bn">REWARDS<small>OUT OF BOUNDS</small></div>
+    </div>
+    <div>${rightHtml}</div>
+  </div>`;
+}
+
+/* ============================================================
+   ROUTING
+   ============================================================ */
+async function boot(){
+  if(!initSupabase()){ return renderConfigError(); }
+  // staff mode via #staff
+  if(location.hash.startsWith('#staff')) return renderStaffGate();
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) return renderDashboard();
+  renderAuth();
+}
+window.addEventListener('hashchange',()=>{ if(location.hash.startsWith('#staff')) renderStaffGate(); else boot(); });
+
+function renderConfigError(){
+  setAccent(null);
+  app.innerHTML = topBar() + `<div class="card">
+    <h2 style="font-size:22px">Almost there</h2>
+    <p class="muted small" style="margin-top:10px;line-height:1.6">
+    Add <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> in your Vercel project's
+    Environment Variables, then redeploy. Full steps are in <b>SETUP.md</b>.</p>
+  </div>`;
+}
+
+/* ============================================================
+   CUSTOMER — AUTH (login / signup)
+   ============================================================ */
+function renderAuth(mode='login'){
+  setAccent(null);
+  app.innerHTML = topBar() + `
+  <div class="card">
+    <div class="tabbar">
+      <button id="tlog" class="${mode==='login'?'active':''}">Log in</button>
+      <button id="tsign" class="${mode==='signup'?'active':''}">Join</button>
+    </div>
+    <div id="authbody"></div>
+  </div>
+  <p class="foot">Earn ${GOAL} stamps across LevelUp, The Axe Factor & XscapeNow → <b>£25 off</b></p>`;
+  $('#tlog').onclick=()=>renderAuth('login');
+  $('#tsign').onclick=()=>renderAuth('signup');
+  const b=$('#authbody');
+  if(mode==='login'){
+    b.innerHTML=`
+      <div class="field"><label class="fl">Email</label><input id="em" type="email" autocomplete="email" placeholder="you@email.com"></div>
+      <div class="field"><label class="fl">Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <div id="err"></div>
+      <div style="margin-top:18px"><button class="btn accent" id="go">Log in</button></div>`;
+    $('#go').onclick=doLogin;
+  }else{
+    b.innerHTML=`
+      <div class="field"><label class="fl">Full name</label><input id="nm" placeholder="Your name"></div>
+      <div class="field"><label class="fl">Email</label><input id="em" type="email" autocomplete="email" placeholder="you@email.com"></div>
+      <div class="field"><label class="fl">Password</label><input id="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div>
+      <div id="err"></div>
+      <div class="welcome-code">Join today & get <b>5% OFF</b> your next booking</div>
+      <div style="margin-top:16px"><button class="btn accent" id="go">Create my card</button></div>`;
+    $('#go').onclick=doSignup;
+  }
+}
+function authErr(m){ const e=$('#err'); if(e) e.innerHTML=`<div class="errmsg">${esc(m)}</div>`; }
+
+async function doLogin(){
+  const email=$('#em').value.trim(), pw=$('#pw').value;
+  if(!email||!pw) return authErr('Enter your email and password.');
+  const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error){ btn.disabled=false; btn.textContent='Log in'; return authErr(error.message); }
+  renderDashboard();
+}
+async function doSignup(){
+  const name=$('#nm').value.trim(), email=$('#em').value.trim(), pw=$('#pw').value;
+  if(!name||!email||!pw) return authErr('Please fill in every field.');
+  if(pw.length<6) return authErr('Password must be at least 6 characters.');
+  const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {data,error}=await sb.auth.signUp({email,password:pw});
+  if(error){ btn.disabled=false; btn.textContent='Create my card'; return authErr(error.message); }
+  // if email confirmation is OFF, we have a session now; claim the card.
+  if(data.session){
+    await sb.rpc('claim_signup',{p_name:name,p_email:email});
+    renderDashboard(true);
+  }else{
+    app.innerHTML = topBar() + `<div class="card center">
+      <h2 style="font-size:22px">Check your email</h2>
+      <p class="muted" style="margin-top:12px;line-height:1.6">We've sent a confirmation link to <b>${esc(email)}</b>. Tap it, then come back and log in to see your card.</p>
+    </div>`;
+  }
+}
+
+/* ============================================================
+   CUSTOMER — DASHBOARD
+   ============================================================ */
+async function ensureCustomer(){
+  let {data:rows}=await sb.from('customers').select('*').limit(1);
+  if(!rows||!rows.length){
+    const {data:{user}}=await sb.auth.getUser();
+    await sb.rpc('claim_signup',{p_name:user?.email||'Member',p_email:user?.email||''});
+    ({data:rows}=await sb.from('customers').select('*').limit(1));
+  }
+  return rows&&rows[0];
+}
+
+async function renderDashboard(justJoined=false){
+  setAccent(null);
+  app.innerHTML = topBar(`<button class="linkbtn" id="logout">Log out</button>`) +
+    `<div class="center" style="padding:50px 0"><span class="spin"></span></div>`;
+  $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
+
+  const cust = await ensureCustomer();
+  if(!cust){ return authErr('Could not load your card. Try logging in again.'); }
+
+  const {data:events}=await sb.from('stamp_events').select('*').order('created_at',{ascending:false}).limit(20);
+  const ready = cust.stamps>=GOAL;
+
+  const stampsHtml = Array.from({length:GOAL},(_,i)=>
+    `<div class="stamp ${i<cust.stamps?'on':''}">${i<cust.stamps?'★':i+1}</div>`).join('');
+
+  app.innerHTML = topBar(`<button class="linkbtn" id="logout">Log out</button>`) + `
+  <div class="loyalty">
+    <div class="lh">
+      <div><div class="lt">Rewards Card</div><div class="ls">${esc(cust.full_name)}</div></div>
+      <img class="obi" src="logos/outofbounds.png" alt="" onerror="this.style.display='none'">
+    </div>
+    <div class="stamps">${stampsHtml}</div>
+    <div class="lprog">
+      <span>${cust.stamps} of ${GOAL} visits</span>
+      <span class="reward-pill">🎟 £25 reward</span>
+    </div>
+  </div>
+
+  ${ready?`<div class="card"><div class="ready">
+      <h3>You've unlocked £25 off! 🎉</h3>
+      <p style="margin:8px 0 0;font-weight:600">Choose where to redeem it.</p>
+   </div>
+   <div style="margin-top:16px"><button class="btn accent" id="redeem">Redeem my £25</button></div>
+   </div>`:''}
+
+  <div class="card qrbox">
+    <div class="small muted" style="letter-spacing:.5px">SHOW THIS AT THE DESK TO COLLECT A STAMP</div>
+    <div class="qrcanvas"><canvas id="qr"></canvas></div>
+    <div class="refchip">${esc(cust.ref)}</div>
+    <div class="small muted center" style="line-height:1.5">Your code is anonymous — staff only see this reference, never your details.</div>
+  </div>
+
+  ${cust.welcome_code?`<div class="card"><div class="small muted" style="letter-spacing:.5px;margin-bottom:4px">YOUR WELCOME OFFER</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><b style="font-family:var(--display);font-size:22px;color:var(--teal);letter-spacing:1px">5% OFF</b><div class="small muted">next booking · code below</div></div>
+      <div class="refchip" style="font-size:18px">${esc(cust.welcome_code)}</div>
+    </div></div>`:''}
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3 style="font-size:17px">Activity</h3>
+      <span class="small muted">last 20</span>
+    </div>
+    ${(events&&events.length)? events.map(e=>{
+      const s=SITES[e.site]||{name:e.site};
+      const redeem=e.kind==='redeem';
+      return `<div class="histrow">
+        <div><div class="hsite">${esc(s.name)}</div><div class="hdate">${fmtDate(e.created_at)}</div></div>
+        <span class="tag ${redeem?'r':'s'}">${redeem?'−£25 redeemed':'+1 stamp'}</span>
+      </div>`;}).join('')
+     : `<p class="muted small" style="margin:6px 0 0">No visits yet. Show your code at any of our venues to collect your first stamp.</p>`}
+  </div>
+
+  <p class="foot">Out of Bounds Immersive · LevelUp · The Axe Factor · XscapeNow</p>`;
+
+  $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
+  // render QR — contains ONLY the ref
+  QRCode.toCanvas($('#qr'), cust.ref, {width:188,margin:1,color:{dark:'#1B1D36',light:'#ffffff'}});
+  if($('#redeem')) $('#redeem').onclick=()=>renderRedeemPicker(cust);
+  if(justJoined) toast('Welcome! Your card is ready 🎉','ok');
+}
+
+/* ---------- customer-side redeem picker (just informational/choice) ---------- */
+function renderRedeemPicker(cust){
+  setAccent(null);
+  app.innerHTML = topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card">
+    <h2 style="font-size:22px">Redeem £25 off</h2>
+    <p class="muted small" style="margin:10px 0 18px;line-height:1.6">Pick the venue you'd like to use your reward at, then show this screen to a team member to confirm.</p>
+    <div class="sitegrid" id="sg">
+      ${Object.entries(SITES).map(([k,s])=>`
+        <button class="sitebtn" data-site="${k}">
+          <span class="dot" style="background:${s.accent}">${s.tag}</span>
+          <span><span class="sn">${s.name}</span><br><span class="sd">${s.short}</span></span>
+        </button>`).join('')}
+    </div>
+    <div id="confirm"></div>
+  </div>`;
+  $('#back').onclick=()=>renderDashboard();
+  let chosen=null;
+  $('#sg').querySelectorAll('.sitebtn').forEach(b=>b.onclick=()=>{
+    $('#sg').querySelectorAll('.sitebtn').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel'); chosen=b.dataset.site; setAccent(chosen);
+    $('#confirm').innerHTML=`<div style="margin-top:18px">
+      <div class="errmsg" style="background:color-mix(in srgb,var(--teal) 14%,transparent);border-color:var(--teal);color:#cfeee8">
+      Show this to a team member at <b>${SITES[chosen].name}</b>. They'll confirm on the staff device and apply your £25 off.</div>
+    </div>`;
+  });
+}
+
+/* ============================================================
+   STAFF PANEL  (#staff)
+   ============================================================ */
+let STAFF = {pin:null, name:null};
+
+function renderStaffGate(){
+  setAccent('axefactor');
+  STAFF={pin:null,name:null};
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="exit">Customer view</button>`) + `
+  <div class="card">
+    <h2 style="font-size:22px">Team access</h2>
+    <p class="muted small" style="margin:8px 0 18px">Enter your staff PIN to manage loyalty cards.</p>
+    <div class="field"><label class="fl">Staff PIN</label><input id="pin" type="password" inputmode="numeric" placeholder="••••"></div>
+    <div id="err"></div>
+    <div style="margin-top:16px"><button class="btn accent" id="go">Unlock</button></div>
+  </div></div>`;
+  $('#exit').onclick=()=>{ location.hash=''; boot(); };
+  $('#go').onclick=staffLogin;
+  $('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')staffLogin();});
+}
+async function staffLogin(){
+  const pin=$('#pin').value.trim();
+  if(!pin) return;
+  const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {data,error}=await sb.rpc('staff_login',{p_pin:pin});
+  if(error||!data||!data.length){ btn.disabled=false; btn.textContent='Unlock'; $('#err').innerHTML=`<div class="errmsg">PIN not recognised.</div>`; return; }
+  STAFF.pin=pin; STAFF.name=data[0].staff_name;
+  renderStaffHome();
+}
+
+function renderStaffHome(){
+  setAccent('axefactor');
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="lock">Lock</button>`) + `
+  <div class="card center">
+    <div class="small muted" style="letter-spacing:.5px">SIGNED IN AS</div>
+    <div style="font-family:var(--display);font-size:22px;margin-top:4px">${esc(STAFF.name)}</div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:17px;margin-bottom:14px">What do you need to do?</h3>
+    <button class="btn accent" id="scan">📷 Scan customer code</button>
+    <button class="btn ghost" id="manual">Enter reference manually</button>
+    <button class="btn ghost" id="newc">Add a new customer</button>
+  </div></div>`;
+  $('#lock').onclick=renderStaffGate;
+  $('#scan').onclick=renderStaffScan;
+  $('#manual').onclick=()=>renderStaffManual();
+  $('#newc').onclick=renderStaffNewCustomer;
+}
+
+function renderStaffManual(){
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card">
+    <h3 style="font-size:18px">Find a customer</h3>
+    <p class="muted small" style="margin:8px 0 16px">Type the reference shown on their card (e.g. OOB-7F3K9).</p>
+    <div class="field"><label class="fl">Reference</label><input id="ref" placeholder="OOB-XXXXX" style="text-transform:uppercase;font-family:var(--display);letter-spacing:2px"></div>
+    <div id="err"></div>
+    <div style="margin-top:16px"><button class="btn accent" id="go">Look up</button></div>
+  </div></div>`;
+  $('#back').onclick=renderStaffHome;
+  $('#go').onclick=async()=>{
+    const ref=$('#ref').value.trim().toUpperCase();
+    if(!ref) return;
+    lookupAndShow(ref);
+  };
+  $('#ref').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
+}
+
+function renderStaffScan(){
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card">
+    <h3 style="font-size:18px;margin-bottom:6px">Scan customer code</h3>
+    <p class="muted small" style="margin-bottom:14px">Point the camera at the QR code on the customer's card.</p>
+    <div id="reader" style="border-radius:14px;overflow:hidden"></div>
+    <div id="err"></div>
+    <div style="margin-top:14px"><button class="btn ghost" id="manual">Enter manually instead</button></div>
+  </div></div>`;
+  $('#back').onclick=()=>{ stopScanner(); renderStaffHome(); };
+  $('#manual').onclick=()=>{ stopScanner(); renderStaffManual(); };
+  startScanner();
+}
+let html5qr=null;
+function startScanner(){
+  try{
+    html5qr=new Html5Qrcode('reader');
+    html5qr.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220}},
+      txt=>{ stopScanner(); lookupAndShow(txt.trim().toUpperCase()); },
+      ()=>{}
+    ).catch(e=>{ $('#err').innerHTML=`<div class="errmsg">Camera unavailable — use “Enter manually”. (${esc(e.message||'')})</div>`; });
+  }catch(e){ $('#err').innerHTML=`<div class="errmsg">Camera not supported here — use manual entry.</div>`; }
+}
+function stopScanner(){ if(html5qr){ try{html5qr.stop().then(()=>html5qr.clear()).catch(()=>{});}catch(e){} html5qr=null; } }
+
+async function lookupAndShow(ref){
+  const {data,error}=await sb.rpc('staff_lookup',{p_pin:STAFF.pin,p_ref:ref});
+  if(error){ toast('Lookup failed.','err'); return renderStaffHome(); }
+  if(!data||!data.length){
+    app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+      <div class="card center"><div class="bignum" style="font-size:30px">Not found</div>
+      <p class="muted" style="margin-top:10px">No customer with reference <b>${esc(ref)}</b>.</p>
+      <div style="margin-top:16px"><button class="btn accent" id="again">Try again</button></div></div></div>`;
+    $('#back').onclick=renderStaffHome; $('#again').onclick=renderStaffManual; return;
+  }
+  showCustomerActions(data[0]);
+}
+
+function showCustomerActions(c){
+  const ready=c.ready;
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card center">
+    <div class="small muted" style="letter-spacing:.5px">CUSTOMER</div>
+    <div class="refchip" style="margin:8px auto 0;display:inline-block">${esc(c.ref)}</div>
+    <div style="margin:20px 0 6px"><span class="bignum">${c.stamps}</span><span class="muted" style="font-size:22px">/${GOAL}</span></div>
+    <div class="small muted">stamps collected</div>
+    ${ready?`<div class="ready" style="margin-top:16px"><h3 style="font-size:18px">£25 reward ready</h3></div>`:''}
+  </div>
+  <div class="card">
+    ${!ready?`<button class="btn accent" id="addstamp">＋ Add a stamp</button>`:''}
+    ${ready?`<button class="btn" id="redeem">Apply £25 reward</button><button class="btn ghost" id="addstamp">＋ Add a stamp instead</button>`:''}
+    <div id="sitewrap" class="hide" style="margin-top:14px">
+      <label class="fl">Which site?</label>
+      <div class="sitegrid" id="sg">
+        ${Object.entries(SITES).map(([k,s])=>`<button class="sitebtn" data-site="${k}">
+          <span class="dot" style="background:${s.accent}">${s.tag}</span>
+          <span class="sn">${s.name}</span></button>`).join('')}
+      </div>
+      <div style="margin-top:14px"><button class="btn accent" id="confirm" disabled>Confirm</button></div>
+    </div>
+    <div id="err"></div>
+  </div></div>`;
+  $('#back').onclick=renderStaffHome;
+  let action=null, site=null;
+  const openSite=(act)=>{ action=act; $('#sitewrap').classList.remove('hide'); $('#confirm').textContent= act==='redeem'?'Confirm £25 redemption':'Confirm stamp'; };
+  if($('#addstamp')) $('#addstamp').onclick=()=>openSite('stamp');
+  if($('#redeem')) $('#redeem').onclick=()=>openSite('redeem');
+  $('#sg')&&$('#sg').querySelectorAll('.sitebtn').forEach(b=>b.onclick=()=>{
+    $('#sg').querySelectorAll('.sitebtn').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel'); site=b.dataset.site; setAccent(site); $('#confirm').disabled=false;
+  });
+  if($('#confirm')) $('#confirm').onclick=async()=>{
+    if(!site) return;
+    const btn=$('#confirm'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+    if(action==='stamp'){
+      const {data,error}=await sb.rpc('staff_add_stamp',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name});
+      if(error){ btn.disabled=false; btn.textContent='Confirm stamp'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
+      toast('Stamp added ★','ok'); showCustomerActions(data[0]);
+    }else{
+      const {error}=await sb.rpc('staff_redeem',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name});
+      if(error){ btn.disabled=false; btn.textContent='Confirm £25 redemption'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
+      toast('£25 reward applied 🎉','ok');
+      const {data}=await sb.rpc('staff_lookup',{p_pin:STAFF.pin,p_ref:c.ref});
+      showCustomerActions(data[0]);
+    }
+  };
+}
+function friendly(m){
+  if(/CARD_FULL/.test(m)) return 'Card already full — apply the £25 reward instead.';
+  if(/NOT_READY/.test(m)) return 'Not enough stamps to redeem yet.';
+  if(/NO_CUSTOMER/.test(m)) return 'Customer not found.';
+  if(/INVALID_PIN/.test(m)) return 'Session expired — please lock and sign in again.';
+  return m;
+}
+
+function renderStaffNewCustomer(){
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card">
+    <h3 style="font-size:18px">Add a new customer</h3>
+    <p class="muted small" style="margin:8px 0 16px">Creates a card on the spot. They can claim the account later with their email.</p>
+    <div class="field"><label class="fl">Name</label><input id="nm" placeholder="Customer name"></div>
+    <div class="field"><label class="fl">Email</label><input id="em" type="email" placeholder="customer@email.com"></div>
+    <div id="err"></div>
+    <div style="margin-top:16px"><button class="btn accent" id="go">Create card</button></div>
+  </div></div>`;
+  $('#back').onclick=renderStaffHome;
+  $('#go').onclick=async()=>{
+    const nm=$('#nm').value.trim(), em=$('#em').value.trim();
+    if(!nm||!em) return $('#err').innerHTML=`<div class="errmsg">Enter a name and email.</div>`;
+    const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+    const {data,error}=await sb.rpc('staff_add_customer',{p_pin:STAFF.pin,p_name:nm,p_email:em});
+    if(error){ btn.disabled=false; btn.textContent='Create card'; return $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; }
+    const ref=data[0].ref;
+    app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Done</button>`) + `
+      <div class="card center"><div class="small muted" style="letter-spacing:.5px">CARD CREATED</div>
+      <div class="refchip" style="margin:14px auto;display:inline-block;font-size:28px">${esc(ref)}</div>
+      <p class="muted small">Give this reference to the customer. They can add a stamp now, or sign up online with their email to see it on their phone.</p>
+      <div style="margin-top:16px"><button class="btn accent" id="stamp">Add their first stamp</button></div></div></div>`;
+    $('#back').onclick=renderStaffHome;
+    $('#stamp').onclick=()=>lookupAndShow(ref);
+  };
+}
+
+/* go */
+boot();
+</script>
+</body>
+</html>
