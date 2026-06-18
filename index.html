@@ -167,7 +167,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 
 <!-- libs -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="qrcode.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/api/config"></script>
 <script>
@@ -204,6 +204,29 @@ function setAccent(site){
 }
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+
+// Draw a scannable QR (just the ref) onto a canvas using the embedded encoder.
+// Falls back to showing the ref large if anything goes wrong.
+function renderQR(canvas, text){
+  try{
+    if(typeof qrcode!=='function') throw new Error('no encoder');
+    var model=null;
+    for(var t=2;t<=8;t++){ try{ model=qrcode(t,'M'); model.addData(text); model.make(); break; }catch(e){ model=null; } }
+    if(!model) throw new Error('encode failed');
+    var n=model.getModuleCount(), border=2, target=188;
+    var size=Math.max(2, Math.floor(target/(n+border*2)));
+    var dim=(n+border*2)*size;
+    canvas.width=dim; canvas.height=dim;
+    var ctx=canvas.getContext('2d');
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,dim,dim);
+    ctx.fillStyle='#1B1D36';
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++){ if(model.isDark(r,c)){ ctx.fillRect((c+border)*size,(r+border)*size,size,size); } }
+  }catch(err){
+    // visible fallback: the ref is enough for staff to type in manually
+    var wrap=canvas.parentNode;
+    if(wrap){ wrap.innerHTML='<div style="padding:24px 18px;text-align:center;font-family:var(--display);font-size:22px;color:#1B1D36;letter-spacing:2px">'+esc(text)+'</div>'; }
+  }
+}
 
 /* ---------- top bar ---------- */
 function topBar(rightHtml=''){
@@ -382,8 +405,8 @@ async function renderDashboard(justJoined=false){
   <p class="foot">Out of Bounds Immersive · LevelUp · The Axe Factor · XscapeNow</p>`;
 
   $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
-  // render QR — contains ONLY the ref
-  QRCode.toCanvas($('#qr'), cust.ref, {width:188,margin:1,color:{dark:'#1B1D36',light:'#ffffff'}});
+  // render QR — contains ONLY the ref. Uses the embedded encoder (no CDN dependency).
+  renderQR($('#qr'), cust.ref);
   if($('#redeem')) $('#redeem').onclick=()=>renderRedeemPicker(cust);
   if(justJoined) toast('Welcome! Your card is ready 🎉','ok');
 }
