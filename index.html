@@ -105,10 +105,10 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 .loyalty .lt{font-family:var(--display);font-size:20px;line-height:1.05}
 .loyalty .ls{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.85;margin-top:6px}
 .loyalty .obi{height:26px;opacity:.92}
-.stamps{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin:22px 0 4px;position:relative;z-index:1}
-.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:15px;color:rgba(255,255,255,.6)}
-.stamp.on{border-style:solid;border-color:#fff;background:#fff;color:var(--pink);box-shadow:0 6px 14px -4px rgba(0,0,0,.4);animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
-@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.stamps{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:22px 0 4px;position:relative;z-index:1}
+.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;color:rgba(255,255,255,.55);background:rgba(255,255,255,.05);transition:all .2s}
+.stamp.on{border:2px solid #fff;background:radial-gradient(circle at 35% 30%,#ffffff,#ffe9ee 70%);color:var(--pink-deep);box-shadow:0 6px 16px -5px rgba(0,0,0,.45),inset 0 -2px 6px rgba(230,67,98,.25);animation:pop .42s cubic-bezier(.34,1.56,.64,1);font-size:18px}
+@keyframes pop{0%{transform:scale(.2) rotate(-25deg);opacity:0}60%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1) rotate(0);opacity:1}}
 .lprog{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px;font-weight:600}
 .reward-pill{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.25);padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;letter-spacing:.3px}
 
@@ -127,7 +127,8 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 .sitebtn{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:15px;border:1.5px solid var(--line);background:#171933;cursor:pointer;transition:border-color .15s,transform .12s,background .15s;color:#fff;text-align:left;width:100%;font-family:var(--body)}
 .sitebtn:hover{transform:translateY(-2px)}
 .sitebtn.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,#171933)}
-.sitebtn .dot{width:40px;height:40px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px}
+.sitebtn .dot{width:46px;height:46px;border-radius:12px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px;overflow:hidden}
+.sitebtn .dot img{width:100%;height:100%;object-fit:contain;padding:7px}
 .sitebtn .sn{font-weight:700;font-size:15px}
 .sitebtn .sd{font-size:12px;color:var(--muted)}
 
@@ -175,9 +176,12 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
    OUT OF BOUNDS REWARDS — app logic
    ============================================================ */
 const SITES = {
-  levelup:   {name:'LevelUp Escapes', short:'Escape rooms · Shrewsbury', accent:'#E64362', deep:'#CF3C56', tag:'L', logo:'logos/levelup.png'},
-  axefactor: {name:'The Axe Factor',  short:'Axe throwing · Shrewsbury', accent:'#43C4B2', deep:'#35a99a', tag:'A', logo:'logos/axefactor.png'},
-  xscapenow: {name:'XscapeNow',       short:'Immersive · Telford',       accent:'#E64362', deep:'#CF3C56', tag:'X', logo:'logos/xscapenow.png'},
+  levelup:   {name:'LevelUp Escapes', short:'Escape rooms · Shrewsbury', accent:'#E64362', deep:'#CF3C56', tag:'L', logo:'logos/levelup.png',
+              email:'help@levelupescapes.com',     address:'Unit SU33, Darwin Centre, Shrewsbury SY1 1BW'},
+  axefactor: {name:'The Axe Factor',  short:'Axe throwing · Shrewsbury', accent:'#43C4B2', deep:'#35a99a', tag:'A', logo:'logos/axefactor.png',
+              email:'axeperts@theaxefactor.co.uk', address:'Unit SU33, Darwin Centre, Shrewsbury SY1 1BW'},
+  xscapenow: {name:'XscapeNow',       short:'Immersive · Telford',       accent:'#E64362', deep:'#CF3C56', tag:'X', logo:'logos/xscapenow.png',
+              email:'info@xscapenow.co.uk',        address:'Units 17–19, Ketley Business Park, Telford TF1 5JD'},
 };
 const GOAL = 6;
 
@@ -402,6 +406,18 @@ async function renderDashboard(justJoined=false){
      : `<p class="muted small" style="margin:6px 0 0">No visits yet. Show your code at any of our venues to collect your first stamp.</p>`}
   </div>
 
+  <div class="card">
+    <h3 style="font-size:17px;margin-bottom:12px">Our venues</h3>
+    ${Object.entries(SITES).map(([k,s])=>`
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">
+        <span class="dot" style="width:38px;height:38px;border-radius:10px;background:${s.accent};flex:0 0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="${s.logo}" alt="" style="width:100%;height:100%;object-fit:contain;padding:6px" onerror="this.style.display='none'"></span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${esc(s.name)}</div>
+          <div class="small muted" style="line-height:1.5">${esc(s.address)}<br><a href="mailto:${s.email}" style="color:var(--teal);text-decoration:none">${esc(s.email)}</a></div>
+        </div>
+      </div>`).join('')}
+  </div>
+
   <p class="foot">Out of Bounds Immersive · LevelUp · The Axe Factor · XscapeNow</p>`;
 
   $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
@@ -411,30 +427,42 @@ async function renderDashboard(justJoined=false){
   if(justJoined) toast('Welcome! Your card is ready 🎉','ok');
 }
 
-/* ---------- customer-side redeem picker (just informational/choice) ---------- */
+/* ---------- customer-side redeem picker with verified email claim ---------- */
 function renderRedeemPicker(cust){
   setAccent(null);
   app.innerHTML = topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
   <div class="card">
     <h2 style="font-size:22px">Redeem £25 off</h2>
-    <p class="muted small" style="margin:10px 0 18px;line-height:1.6">Pick the venue you'd like to use your reward at, then show this screen to a team member to confirm.</p>
+    <p class="muted small" style="margin:10px 0 18px;line-height:1.6">Choose the venue you'd like to use your reward at. We'll help you email them to claim it — your membership number is included automatically so they can verify it.</p>
     <div class="sitegrid" id="sg">
       ${Object.entries(SITES).map(([k,s])=>`
         <button class="sitebtn" data-site="${k}">
-          <span class="dot" style="background:${s.accent}">${s.tag}</span>
+          <span class="dot" style="background:${s.accent}"><img src="${s.logo}" alt="${esc(s.name)}" onerror="this.style.display='none';this.parentNode.textContent='${s.tag}'"></span>
           <span><span class="sn">${s.name}</span><br><span class="sd">${s.short}</span></span>
         </button>`).join('')}
     </div>
     <div id="confirm"></div>
   </div>`;
   $('#back').onclick=()=>renderDashboard();
-  let chosen=null;
   $('#sg').querySelectorAll('.sitebtn').forEach(b=>b.onclick=()=>{
     $('#sg').querySelectorAll('.sitebtn').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel'); chosen=b.dataset.site; setAccent(chosen);
-    $('#confirm').innerHTML=`<div style="margin-top:18px">
-      <div class="errmsg" style="background:color-mix(in srgb,var(--teal) 14%,transparent);border-color:var(--teal);color:#cfeee8">
-      Show this to a team member at <b>${SITES[chosen].name}</b>. They'll confirm on the staff device and apply your £25 off.</div>
+    b.classList.add('sel'); const k=b.dataset.site, s=SITES[k]; setAccent(k);
+    const subject=encodeURIComponent('£25 Reward Redemption — '+cust.ref);
+    const body=encodeURIComponent(
+      'Hi '+s.name+' team,\n\n'+
+      'I\'d like to redeem my £25 Out of Bounds Rewards reward.\n\n'+
+      'Name: '+cust.full_name+'\n'+
+      'Membership number: '+cust.ref+'\n\n'+
+      'Please could you confirm and apply my £25 off? Thank you!');
+    const mailto='mailto:'+s.email+'?subject='+subject+'&body='+body;
+    $('#confirm').innerHTML=`<div style="margin-top:20px">
+      <div style="background:color-mix(in srgb,var(--accent) 12%,#171933);border:1px solid var(--accent);border-radius:14px;padding:16px">
+        <div style="font-weight:700;margin-bottom:6px">Claim at ${esc(s.name)}</div>
+        <p class="small" style="margin:0 0 4px;color:#cfd3ef;line-height:1.6">Email <b>${esc(s.email)}</b> quoting your membership number:</p>
+        <div class="refchip" style="font-size:18px;margin:8px 0 12px;display:inline-block">${esc(cust.ref)}</div>
+        <a href="${mailto}" class="btn accent" style="display:block;text-align:center;text-decoration:none">✉️ Email ${esc(s.name)} to claim</a>
+        <p class="small muted" style="margin:12px 0 0;line-height:1.6">📍 ${esc(s.address)}</p>
+      </div>
     </div>`;
   });
 }
@@ -442,11 +470,11 @@ function renderRedeemPicker(cust){
 /* ============================================================
    STAFF PANEL  (#staff)
    ============================================================ */
-let STAFF = {pin:null, name:null};
+let STAFF = {pin:null, name:null, site:null};
 
 function renderStaffGate(){
   setAccent('axefactor');
-  STAFF={pin:null,name:null};
+  STAFF={pin:null,name:null,site:null};
   app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="exit">Customer view</button>`) + `
   <div class="card">
     <h2 style="font-size:22px">Team access</h2>
@@ -465,7 +493,7 @@ async function staffLogin(){
   const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
   const {data,error}=await sb.rpc('staff_login',{p_pin:pin});
   if(error||!data||!data.length){ btn.disabled=false; btn.textContent='Unlock'; $('#err').innerHTML=`<div class="errmsg">PIN not recognised.</div>`; return; }
-  STAFF.pin=pin; STAFF.name=data[0].staff_name;
+  STAFF.pin=pin; STAFF.name=data[0].staff_name; STAFF.site=data[0].staff_site||null;
   renderStaffHome();
 }
 
@@ -475,6 +503,7 @@ function renderStaffHome(){
   <div class="card center">
     <div class="small muted" style="letter-spacing:.5px">SIGNED IN AS</div>
     <div style="font-family:var(--display);font-size:22px;margin-top:4px">${esc(STAFF.name)}</div>
+    ${STAFF.site&&SITES[STAFF.site]?`<div class="small" style="margin-top:6px;color:${SITES[STAFF.site].accent};font-weight:700">${esc(SITES[STAFF.site].name)}</div>`:''}
   </div>
   <div class="card">
     <h3 style="font-size:17px;margin-bottom:14px">What do you need to do?</h3>
@@ -561,7 +590,7 @@ function showCustomerActions(c){
       <label class="fl">Which site?</label>
       <div class="sitegrid" id="sg">
         ${Object.entries(SITES).map(([k,s])=>`<button class="sitebtn" data-site="${k}">
-          <span class="dot" style="background:${s.accent}">${s.tag}</span>
+          <span class="dot" style="background:${s.accent}"><img src="${s.logo}" alt="${esc(s.name)}" onerror="this.style.display='none';this.parentNode.textContent='${s.tag}'"></span>
           <span class="sn">${s.name}</span></button>`).join('')}
       </div>
       <div style="margin-top:14px"><button class="btn accent" id="confirm" disabled>Confirm</button></div>
@@ -569,8 +598,17 @@ function showCustomerActions(c){
     <div id="err"></div>
   </div></div>`;
   $('#back').onclick=renderStaffHome;
-  let action=null, site=null;
-  const openSite=(act)=>{ action=act; $('#sitewrap').classList.remove('hide'); $('#confirm').textContent= act==='redeem'?'Confirm £25 redemption':'Confirm stamp'; };
+  let action=null, site=STAFF.site||null;
+  const openSite=(act)=>{ action=act;
+    $('#sitewrap').classList.remove('hide');
+    $('#confirm').textContent= act==='redeem'?'Confirm £25 redemption':'Confirm stamp';
+    // If this is a per-site staff PIN, pre-select their site automatically.
+    if(STAFF.site && SITES[STAFF.site]){
+      site=STAFF.site;
+      $('#sg').querySelectorAll('.sitebtn').forEach(x=>{ x.classList.toggle('sel', x.dataset.site===STAFF.site); });
+      setAccent(STAFF.site); $('#confirm').disabled=false;
+    }
+  };
   if($('#addstamp')) $('#addstamp').onclick=()=>openSite('stamp');
   if($('#redeem')) $('#redeem').onclick=()=>openSite('redeem');
   $('#sg')&&$('#sg').querySelectorAll('.sitebtn').forEach(b=>b.onclick=()=>{
