@@ -19,6 +19,12 @@ const SB_URL = Deno.env.get("SB_URL")!;
 const SB_SERVICE_KEY = Deno.env.get("SB_SERVICE_KEY")!;
 const WW_BASE = "https://api.walletwallet.dev";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 // Your three venues for lock-screen geofencing
 const LOCATIONS = [
   { latitude: 52.7080, longitude: -2.7536, relevantText: "Welcome to LevelUp Escapes / The Axe Factor!" }, // Darwin Centre, Shrewsbury SY1 1BW
@@ -72,6 +78,10 @@ async function sbFetch(path: string, opts: RequestInit = {}) {
 }
 
 serve(async (req) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS });
+  }
   try {
     const payload = await req.json();
     // Accept either a direct call { action, ref } or a DB webhook { type, record }.
@@ -82,14 +92,14 @@ serve(async (req) => {
       // On a customers UPDATE webhook, sync the pass if one exists, else skip.
       action = payload.record.pass_serial ? "sync" : "skip";
     }
-    if (action === "skip") return new Response("no pass yet", { status: 200 });
-    if (!ref) return new Response("missing ref", { status: 400 });
+    if (action === "skip") return new Response("no pass yet", { status: 200, headers: CORS });
+    if (!ref) return new Response("missing ref", { status: 400, headers: CORS });
 
     // load the customer
     const r = await sbFetch(`customers?ref=eq.${encodeURIComponent(ref)}&select=ref,full_name,stamps,pass_serial`);
     const rows = await r.json();
     const cust = rows[0];
-    if (!cust) return new Response("no customer", { status: 404 });
+    if (!cust) return new Response("no customer", { status: 404, headers: CORS });
 
     if (action === "create" || !cust.pass_serial) {
       // mint a new pass
@@ -98,14 +108,14 @@ serve(async (req) => {
         headers: { "Authorization": `Bearer ${WW_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(passBody(cust))
       });
-      if (!res.ok) { console.error("WW create failed", await res.text()); return new Response("ww error", { status: 502 }); }
+      if (!res.ok) { console.error("WW create failed", await res.text()); return new Response("ww error", { status: 502, headers: CORS }); }
       const data = await res.json();
       // store serial + share url
       await sbFetch(`customers?ref=eq.${encodeURIComponent(ref)}`, {
         method: "PATCH",
         body: JSON.stringify({ pass_serial: data.serialNumber, pass_share_url: data.shareUrl })
       });
-      return Response.json({ shareUrl: data.shareUrl, googleSaveUrl: data.googleSaveUrl, serial: data.serialNumber });
+      return Response.json({ shareUrl: data.shareUrl, googleSaveUrl: data.googleSaveUrl, serial: data.serialNumber }, { headers: CORS });
     } else {
       // sync existing pass (full body)
       const res = await fetch(`${WW_BASE}/api/passes/${cust.pass_serial}`, {
@@ -113,11 +123,11 @@ serve(async (req) => {
         headers: { "Authorization": `Bearer ${WW_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(passBody(cust))
       });
-      if (!res.ok) { console.error("WW update failed", await res.text()); return new Response("ww error", { status: 502 }); }
-      return Response.json({ ok: true });
+      if (!res.ok) { console.error("WW update failed", await res.text()); return new Response("ww error", { status: 502, headers: CORS }); }
+      return Response.json({ ok: true }, { headers: CORS });
     }
   } catch (e) {
     console.error(e);
-    return new Response("error", { status: 500 });
+    return new Response("error", { status: 500, headers: CORS });
   }
 });
