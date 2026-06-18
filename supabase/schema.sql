@@ -58,7 +58,7 @@ create table if not exists public.staff (
 --  HELPER: generate a unique customer ref like OOB-7F3K9
 -- ============================================================
 create or replace function public.gen_ref()
-returns text language plpgsql as $$
+returns text language plpgsql as $gen_ref$
 declare
   alphabet text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; -- no confusing 0/O/1/I/L
   candidate text;
@@ -72,7 +72,7 @@ begin
     exit when not exists (select 1 from public.customers where ref = candidate);
   end loop;
   return candidate;
-end $$;
+end $gen_ref$;
 
 -- ============================================================
 --  ROW LEVEL SECURITY
@@ -121,18 +121,18 @@ create policy "customer reads own redemptions" on public.redemptions
 -- Verify a staff PIN, return the staff name if valid.
 create or replace function public.staff_login(p_pin text)
 returns table(staff_name text)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $staff_login$
 begin
   return query
     select s.name from public.staff s
     where s.active and s.pin_hash = crypt(p_pin, s.pin_hash);
-end $$;
+end $staff_login$;
 
 -- Look up a customer by ref for the staff panel.
 -- Returns ONLY ref + stamp balance — NO name, NO email. GDPR-safe scan.
 create or replace function public.staff_lookup(p_pin text, p_ref text)
 returns table(ref text, stamps int, ready boolean)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $staff_lookup$
 declare ok boolean;
 begin
   select exists(select 1 from public.staff s
@@ -142,12 +142,12 @@ begin
   return query
     select c.ref, c.stamps, (c.stamps >= 6) as ready
     from public.customers c where c.ref = p_ref;
-end $$;
+end $staff_lookup$;
 
 -- Add a stamp to a customer (by ref). Caps display at 6; refuses if already at 6.
 create or replace function public.staff_add_stamp(p_pin text, p_ref text, p_site text, p_staff text)
 returns table(ref text, stamps int, ready boolean)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $staff_add_stamp$
 declare ok boolean; cust public.customers%rowtype;
 begin
   select exists(select 1 from public.staff s
@@ -165,12 +165,12 @@ begin
 
   return query select c.ref, c.stamps, (c.stamps >= 6) as ready
     from public.customers c where c.id = cust.id;
-end $$;
+end $staff_add_stamp$;
 
 -- Process a £25 redemption (staff-side confirmation at the desk).
 create or replace function public.staff_redeem(p_pin text, p_ref text, p_site text, p_staff text)
 returns table(ref text, stamps int)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $staff_redeem$
 declare ok boolean; cust public.customers%rowtype;
 begin
   select exists(select 1 from public.staff s
@@ -188,13 +188,13 @@ begin
     values (cust.id, p_site, p_staff, -6, 'redeem');
 
   return query select c.ref, c.stamps from public.customers c where c.id = cust.id;
-end $$;
+end $staff_redeem$;
 
 -- Staff add a brand-new customer at the desk (e.g. walk-ins with no smartphone).
 -- Creates a customer with NO auth account; they can claim it later by ref+email.
 create or replace function public.staff_add_customer(p_pin text, p_name text, p_email text)
 returns table(ref text)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $staff_add_customer$
 declare ok boolean; new_ref text;
 begin
   select exists(select 1 from public.staff s
@@ -205,12 +205,12 @@ begin
   insert into public.customers(ref, full_name, email, welcome_code)
     values (new_ref, p_name, p_email, 'WELCOME5');
   return query select new_ref;
-end $$;
+end $staff_add_customer$;
 
 -- Customer self-signup helper: links auth user, assigns ref + welcome code.
 create or replace function public.claim_signup(p_name text, p_email text)
 returns table(ref text, welcome_code text)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $claim_signup$
 declare new_ref text;
 begin
   if auth.uid() is null then raise exception 'NOT_AUTHED'; end if;
@@ -223,7 +223,7 @@ begin
   insert into public.customers(auth_id, ref, full_name, email, welcome_code)
     values (auth.uid(), new_ref, p_name, p_email, 'WELCOME5');
   return query select new_ref, 'WELCOME5';
-end $$;
+end $claim_signup$;
 
 -- ============================================================
 --  SEED A STAFF PIN  (change 1234 before going live!)
