@@ -32,7 +32,7 @@ function passBody(c: { ref: string; full_name: string; stamps: number }) {
   return {
     barcodeValue: c.ref,
     barcodeFormat: "QR",
-    logoText: "Out of Bounds Rewards",
+    logoText: "",
     organizationName: "Out of Bounds Rewards",
     description: "Out of Bounds Rewards loyalty card",
     headerFields: [{
@@ -52,7 +52,9 @@ function passBody(c: { ref: string; full_name: string; stamps: number }) {
       { label: "XscapeNow", value: "Units 17–19, Ketley Business Park, Telford TF1 5JD · info@xscapenow.co.uk" }
     ],
     locations: LOCATIONS,
+    color: "#E64362",
     colorPreset: "red",
+    logoURL: "https://oob-rewards.vercel.app/logos/outofbounds.png",
     sharingProhibited: true
   };
 }
