@@ -14,9 +14,9 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
-const WW_KEY = Deno.env.get("WALLETWALLET_KEY")!;
-const SB_URL = Deno.env.get("SB_URL")!;
-const SB_SERVICE_KEY = Deno.env.get("SB_SERVICE_KEY")!;
+const WW_KEY = Deno.env.get("WALLETWALLET_KEY") || "";
+const SB_URL = Deno.env.get("SB_URL") || "";
+const SB_SERVICE_KEY = Deno.env.get("SB_SERVICE_KEY") || "";
 const WW_BASE = "https://api.walletwallet.dev";
 
 const CORS = {
@@ -81,6 +81,13 @@ serve(async (req) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
+  }
+  // Clear error (with CORS) if secrets aren't set, instead of a startup crash.
+  if (!WW_KEY || !SB_URL || !SB_SERVICE_KEY) {
+    return Response.json(
+      { error: "Missing secrets", have: { WALLETWALLET_KEY: !!WW_KEY, SB_URL: !!SB_URL, SB_SERVICE_KEY: !!SB_SERVICE_KEY } },
+      { status: 500, headers: CORS }
+    );
   }
   try {
     const payload = await req.json();
