@@ -209,6 +209,30 @@ function setAccent(site){
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
 
+// Show an "Add to Apple / Google Wallet" button. If the customer already has a
+// hosted pass page, link straight to it; otherwise mint one on tap via the
+// wallet-pass Edge Function, then open the share page.
+async function renderWalletButton(cust){
+  const box=$('#walletbtn'); if(!box) return;
+  if(cust.pass_share_url){
+    box.innerHTML=`<a href="${cust.pass_share_url}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Add to Apple / Google Wallet</a>`;
+    return;
+  }
+  box.innerHTML=`<button class="btn ghost" id="mkwallet" style="margin-top:8px">📲 Add to Apple / Google Wallet</button>`;
+  $('#mkwallet').onclick=async()=>{
+    const b=$('#mkwallet'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    try{
+      const {data,error}=await sb.functions.invoke('wallet-pass',{body:{action:'create',ref:cust.ref}});
+      if(error||!data||!data.shareUrl) throw new Error('failed');
+      box.innerHTML=`<a href="${data.shareUrl}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Open in Apple / Google Wallet</a>`;
+      window.open(data.shareUrl,'_blank');
+    }catch(e){
+      b.disabled=false; b.textContent='📲 Add to Apple / Google Wallet';
+      toast('Could not create your wallet pass just now.','err');
+    }
+  };
+}
+
 // Draw a scannable QR (just the ref) onto a canvas using the embedded encoder.
 // Falls back to showing the ref large if anything goes wrong.
 function renderQR(canvas, text){
@@ -383,6 +407,7 @@ async function renderDashboard(justJoined=false){
     <div class="qrcanvas"><canvas id="qr"></canvas></div>
     <div class="refchip">${esc(cust.ref)}</div>
     <div class="small muted center" style="line-height:1.5">Your code is anonymous — staff only see this reference, never your details.</div>
+    <div id="walletbtn" style="width:100%;margin-top:4px"></div>
   </div>
 
   ${cust.welcome_code?`<div class="card"><div class="small muted" style="letter-spacing:.5px;margin-bottom:4px">YOUR WELCOME OFFER</div>
@@ -423,6 +448,7 @@ async function renderDashboard(justJoined=false){
   $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
   // render QR — contains ONLY the ref. Uses the embedded encoder (no CDN dependency).
   renderQR($('#qr'), cust.ref);
+  renderWalletButton(cust);
   if($('#redeem')) $('#redeem').onclick=()=>renderRedeemPicker(cust);
   if(justJoined) toast('Welcome! Your card is ready 🎉','ok');
 }
