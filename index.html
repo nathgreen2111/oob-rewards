@@ -121,6 +121,9 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 .ready{background:linear-gradient(180deg,var(--teal),var(--teal-deep));color:#06231f;border-radius:16px;padding:18px;text-align:center;animation:glow 2.2s ease-in-out infinite}
 .ready h3{font-size:22px;color:#06231f}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(67,196,178,.45)}50%{box-shadow:0 0 0 14px rgba(67,196,178,0)}}
+@keyframes flashIn{from{opacity:0;transform:scale(1.1)}to{opacity:1;transform:scale(1)}}
+@keyframes flashOut{to{opacity:0}}
+@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
 
 /* ---------- site picker ---------- */
 .sitegrid{display:grid;gap:11px;margin-top:6px}
@@ -208,6 +211,55 @@ function setAccent(site){
 }
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+
+/* ---------- Staff feedback: sound, haptics, flash ---------- */
+let SOUND_STYLE = (typeof localStorage!=='undefined' && localStorage.getItem) ? null : null; // chosen at runtime
+let _audioCtx=null;
+function audioCtx(){ if(!_audioCtx){ try{ _audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _audioCtx; }
+function tone(freq,start,dur,type='sine',gain=0.18){
+  const ctx=audioCtx(); if(!ctx) return;
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type; o.frequency.value=freq;
+  o.connect(g); g.connect(ctx.destination);
+  const t=ctx.currentTime+start;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(gain,t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur+0.02);
+}
+// three success styles
+function soundDing(){ tone(880,0,0.12,'sine',0.2); tone(1320,0.08,0.18,'sine',0.16); }
+function soundPop(){ tone(523,0,0.07,'triangle',0.18); tone(784,0.05,0.12,'triangle',0.16); }
+function soundArcade(){ tone(523,0,0.06,'square',0.12); tone(659,0.06,0.06,'square',0.12); tone(784,0.12,0.06,'square',0.12); tone(1047,0.18,0.16,'square',0.14); }
+function playSuccess(){ const s=getSoundStyle(); if(s==='off')return; (s==='pop'?soundPop:s==='arcade'?soundArcade:soundDing)(); }
+function playFail(){ if(getSoundStyle()==='off')return; tone(200,0,0.18,'sawtooth',0.15); tone(150,0.12,0.22,'sawtooth',0.13); }
+function playCelebrate(){ if(getSoundStyle()==='off')return; [523,659,784,1047,1319].forEach((f,i)=>tone(f,i*0.09,0.25,'triangle',0.16)); }
+function getSoundStyle(){ try{ return localStorage.getItem('oob_sound')||'ding'; }catch(e){ return 'ding'; } }
+function setSoundStyle(s){ try{ localStorage.setItem('oob_sound',s); }catch(e){} }
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+// full-screen flash overlay
+function flash(kind,label){
+  const c = kind==='ok' ? '#3ecf8e' : kind==='reward' ? '#43C4B2' : '#ff6b6b';
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${c};color:#06231f;font-family:var(--display);text-align:center;animation:flashIn .25s ease,flashOut .4s ease 1s forwards;`;
+  el.innerHTML=`<div style="font-size:64px;line-height:1">${kind==='ok'?'★':kind==='reward'?'🎉':'✕'}</div><div style="font-size:26px;margin-top:14px;padding:0 24px">${esc(label)}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1450);
+}
+function confetti(){
+  const colors=['#E64362','#43C4B2','#FFD23F','#fff'];
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;inset:0;z-index:10000;pointer-events:none;overflow:hidden';
+  for(let i=0;i<80;i++){
+    const p=document.createElement('div');
+    const size=6+Math.random()*8;
+    p.style.cssText=`position:absolute;top:-20px;left:${Math.random()*100}%;width:${size}px;height:${size*0.5}px;background:${colors[i%colors.length]};border-radius:2px;transform:rotate(${Math.random()*360}deg);animation:confettiFall ${1.2+Math.random()*1.3}s ${Math.random()*0.4}s ease-in forwards`;
+    wrap.appendChild(p);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(()=>wrap.remove(),3200);
+}
+
 
 // Render Apple + Google Wallet buttons in-app (no redirect away). Mints the pass
 // via the Edge Function on first tap, then shows both native add buttons in place.
@@ -544,11 +596,77 @@ function renderStaffHome(){
     <button class="btn accent" id="scan">📷 Scan customer code</button>
     <button class="btn ghost" id="manual">Enter reference manually</button>
     <button class="btn ghost" id="newc">Add a new customer</button>
+    <div class="btnrow" style="margin-top:11px">
+      <button class="btn ghost" id="today" style="flex:1">📊 Today</button>
+      <button class="btn ghost" id="soundbtn" style="flex:1">🔊 Sound</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3 style="font-size:16px">Recent activity</h3><span class="small muted" id="reccount"></span>
+    </div>
+    <div id="recent"><div class="center" style="padding:14px"><span class="spin"></span></div></div>
   </div></div>`;
   $('#lock').onclick=renderStaffGate;
   $('#scan').onclick=renderStaffScan;
   $('#manual').onclick=()=>renderStaffManual();
   $('#newc').onclick=renderStaffNewCustomer;
+  $('#today').onclick=renderStaffToday;
+  $('#soundbtn').onclick=renderSoundSetting;
+  loadRecent();
+}
+
+async function loadRecent(){
+  const box=$('#recent'); if(!box) return;
+  const {data,error}=await sb.rpc('staff_recent',{p_pin:STAFF.pin,p_limit:8});
+  if(error||!data||!data.length){ box.innerHTML=`<p class="muted small" style="margin:6px 0">No activity yet today.</p>`; return; }
+  box.innerHTML=data.map(e=>{
+    const s=SITES[e.site]||{name:e.site}; const redeem=e.kind==='redeem';
+    const t=new Date(e.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="histrow">
+      <div><div class="hsite">${esc(e.ref)} · ${esc(s.name)}</div><div class="hdate">${t}${e.staff_name?(' · '+esc(e.staff_name)):''}</div></div>
+      <span class="tag ${redeem?'r':'s'}">${redeem?'−£25':'+1'}</span>
+    </div>`;}).join('');
+}
+
+async function renderStaffToday(){
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card"><h2 style="font-size:22px;margin-bottom:4px">Today</h2>
+  <p class="small muted" style="margin-bottom:14px">Since midnight, across all sites</p>
+  <div id="sum"><div class="center" style="padding:14px"><span class="spin"></span></div></div></div></div>`;
+  $('#back').onclick=renderStaffHome;
+  const {data,error}=await sb.rpc('staff_today',{p_pin:STAFF.pin});
+  const box=$('#sum');
+  if(error||!data||!data.length){ box.innerHTML=`<p class="muted small">No activity yet today.</p>`; return; }
+  let totS=0,totR=0; data.forEach(r=>{totS+=Number(r.stamps_added);totR+=Number(r.redemptions);});
+  box.innerHTML=`
+    <div class="btnrow" style="margin-bottom:16px">
+      <div class="card" style="flex:1;text-align:center;padding:16px"><div class="bignum" style="font-size:34px">${totS}</div><div class="small muted">stamps added</div></div>
+      <div class="card" style="flex:1;text-align:center;padding:16px"><div class="bignum" style="font-size:34px;color:var(--yellow)">${totR}</div><div class="small muted">£25 redemptions</div></div>
+    </div>
+    <h3 style="font-size:15px;margin-bottom:8px">By team member</h3>
+    ${data.map(r=>{const s=SITES[r.site]||{name:r.site};return `<div class="histrow">
+      <div><div class="hsite">${esc(r.staff_name)}</div><div class="hdate">${esc(s.name)}</div></div>
+      <span class="small">${r.stamps_added} stamps${Number(r.redemptions)?(' · '+r.redemptions+' redeemed'):''}</span>
+    </div>`;}).join('')}`;
+}
+
+function renderSoundSetting(){
+  const cur=getSoundStyle();
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  <div class="card"><h2 style="font-size:22px;margin-bottom:14px">Scan sound</h2>
+  <div class="sitegrid">
+    ${[['ding','Classic ding'],['pop','Soft pop'],['arcade','Arcade blip'],['off','No sound']].map(([k,label])=>
+      `<button class="sitebtn ${cur===k?'sel':''}" data-s="${k}"><span class="sn">${label}</span></button>`).join('')}
+  </div>
+  <p class="small muted" style="margin-top:14px">Tap to preview &amp; save. Applies on this device.</p>
+  </div></div>`;
+  $('#back').onclick=renderStaffHome;
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+    const s=b.dataset.s; setSoundStyle(s);
+    document.querySelectorAll('[data-s]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
+    if(s!=='off'){ playSuccess(); buzz(40); }
+  });
 }
 
 function renderStaffManual(){
@@ -596,20 +714,21 @@ function stopScanner(){ if(html5qr){ try{html5qr.stop().then(()=>html5qr.clear()
 
 async function lookupAndShow(ref){
   const {data,error}=await sb.rpc('staff_lookup',{p_pin:STAFF.pin,p_ref:ref});
-  if(error){ toast('Lookup failed.','err'); return renderStaffHome(); }
+  if(error){ playFail(); toast('Lookup failed.','err'); return renderStaffHome(); }
   if(!data||!data.length){
+    playFail(); buzz([60,40,60]);
     app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
       <div class="card center"><div class="bignum" style="font-size:30px">Not found</div>
       <p class="muted" style="margin-top:10px">No customer with reference <b>${esc(ref)}</b>.</p>
-      <div style="margin-top:16px"><button class="btn accent" id="again">Try again</button></div></div></div>`;
-    $('#back').onclick=renderStaffHome; $('#again').onclick=renderStaffManual; return;
+      <div class="btnrow" style="margin-top:16px"><button class="btn accent" id="rescan" style="flex:1">📷 Scan again</button><button class="btn ghost" id="again" style="flex:1">Type it</button></div></div></div>`;
+    $('#back').onclick=renderStaffHome; $('#again').onclick=renderStaffManual; $('#rescan').onclick=renderStaffScan; return;
   }
   showCustomerActions(data[0]);
 }
 
 function showCustomerActions(c){
   const ready=c.ready;
-  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">← Back</button>`) + `
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="scannext">📷 Next</button> <button class="linkbtn" id="back">Done</button>`) + `
   <div class="card center">
     <div class="small muted" style="letter-spacing:.5px">CUSTOMER</div>
     <div class="refchip" style="margin:8px auto 0;display:inline-block">${esc(c.ref)}</div>
@@ -630,8 +749,18 @@ function showCustomerActions(c){
       <div style="margin-top:14px"><button class="btn accent" id="confirm" disabled>Confirm</button></div>
     </div>
     <div id="err"></div>
-  </div></div>`;
+  </div>
+  ${(window._lastAction && window._lastAction.ref===c.ref && (Date.now()-window._lastAction.at)<60000)?`<div class="card"><button class="btn ghost" id="undo" style="border-color:var(--warn);color:#ffd1d1">↩ Undo last ${window._lastAction.type==='redeem'?'redemption':'stamp'}</button></div>`:''}
+  </div>`;
   $('#back').onclick=renderStaffHome;
+  if($('#scannext')) $('#scannext').onclick=renderStaffScan;
+  if($('#undo')) $('#undo').onclick=async()=>{
+    const u=$('#undo'); u.disabled=true; u.innerHTML='<span class="spin"></span>';
+    const {data,error}=await sb.rpc('staff_undo',{p_pin:STAFF.pin,p_ref:c.ref});
+    if(error){ playFail(); u.disabled=false; u.textContent='↩ Undo'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
+    buzz(40); toast('Last action undone','ok'); window._lastAction=null;
+    showCustomerActions(data[0]);
+  };
   let action=null, site=STAFF.site||null;
   const openSite=(act)=>{ action=act;
     $('#sitewrap').classList.remove('hide');
@@ -654,14 +783,23 @@ function showCustomerActions(c){
     const btn=$('#confirm'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
     if(action==='stamp'){
       const {data,error}=await sb.rpc('staff_add_stamp',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name});
-      if(error){ btn.disabled=false; btn.textContent='Confirm stamp'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
-      toast('Stamp added ★','ok'); showCustomerActions(data[0]);
+      if(error){ playFail(); buzz([60,40,60]); btn.disabled=false; btn.textContent='Confirm stamp'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
+      const updated=data[0];
+      if(updated.ready){
+        // they just hit 6!
+        playCelebrate(); buzz([0,80,40,80,40,120]); confetti(); flash('reward','£25 UNLOCKED! 🎉');
+      }else{
+        playSuccess(); buzz(60); flash('ok','STAMP ADDED ★');
+      }
+      window._lastAction={type:'stamp',ref:c.ref,site:site,at:Date.now()};
+      setTimeout(()=>showCustomerActions(updated),900);
     }else{
       const {error}=await sb.rpc('staff_redeem',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name});
-      if(error){ btn.disabled=false; btn.textContent='Confirm £25 redemption'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
-      toast('£25 reward applied 🎉','ok');
+      if(error){ playFail(); buzz([60,40,60]); btn.disabled=false; btn.textContent='Confirm £25 redemption'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
+      playCelebrate(); buzz([0,80,40,120]); confetti(); flash('reward','£25 REDEEMED 🎉');
+      window._lastAction={type:'redeem',ref:c.ref,site:site,at:Date.now()};
       const {data}=await sb.rpc('staff_lookup',{p_pin:STAFF.pin,p_ref:c.ref});
-      showCustomerActions(data[0]);
+      setTimeout(()=>showCustomerActions(data[0]),900);
     }
   };
 }
