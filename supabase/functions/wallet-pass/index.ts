@@ -90,7 +90,13 @@ serve(async (req) => {
     );
   }
   try {
-    const payload = await req.json();
+    let payload: any = {};
+    try {
+      const raw = await req.text();
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return Response.json({ error: "Invalid or empty JSON body", hint: "Send POST with {\"action\":\"create\",\"ref\":\"OOB-XXXXX\"}" }, { status: 400, headers: CORS });
+    }
     // Accept either a direct call { action, ref } or a DB webhook { type, record }.
     let action = payload.action;
     let ref = payload.ref;
@@ -104,6 +110,9 @@ serve(async (req) => {
 
     // load the customer
     const r = await sbFetch(`customers?ref=eq.${encodeURIComponent(ref)}&select=ref,full_name,stamps,pass_serial`);
+    if (!r.ok) {
+      return Response.json({ error: "Supabase fetch failed (check SB_SERVICE_KEY/SB_URL)", status: r.status, detail: await r.text() }, { status: 500, headers: CORS });
+    }
     const rows = await r.json();
     const cust = rows[0];
     if (!cust) return new Response("no customer", { status: 404, headers: CORS });
@@ -115,7 +124,11 @@ serve(async (req) => {
         headers: { "Authorization": `Bearer ${WW_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(passBody(cust))
       });
-      if (!res.ok) { console.error("WW create failed", await res.text()); return new Response("ww error", { status: 502, headers: CORS }); }
+      if (!res.ok) {
+        const detail = await res.text();
+        console.error("WW create failed", detail);
+        return Response.json({ error: "WalletWallet create failed (check WALLETWALLET_KEY / pass fields)", status: res.status, detail }, { status: 502, headers: CORS });
+      }
       const data = await res.json();
       // store serial + share url
       await sbFetch(`customers?ref=eq.${encodeURIComponent(ref)}`, {
@@ -130,11 +143,15 @@ serve(async (req) => {
         headers: { "Authorization": `Bearer ${WW_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(passBody(cust))
       });
-      if (!res.ok) { console.error("WW update failed", await res.text()); return new Response("ww error", { status: 502, headers: CORS }); }
+      if (!res.ok) {
+        const detail = await res.text();
+        console.error("WW update failed", detail);
+        return Response.json({ error: "WalletWallet update failed", status: res.status, detail }, { status: 502, headers: CORS });
+      }
       return Response.json({ ok: true }, { headers: CORS });
     }
   } catch (e) {
     console.error(e);
-    return new Response("error", { status: 500, headers: CORS });
+    return Response.json({ error: "Function crashed", detail: String(e) }, { status: 500, headers: CORS });
   }
 });

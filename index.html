@@ -222,7 +222,7 @@ async function renderWalletButton(cust){
   $('#mkwallet').onclick=async()=>{
     const b=$('#mkwallet'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
     try{
-      const {data,error}=await sb.functions.invoke('super-handler',{body:{action:'create',ref:cust.ref}});
+      const {data,error}=await sb.functions.invoke('wallet-pass',{body:{action:'create',ref:cust.ref}});
       if(error||!data||!data.shareUrl) throw new Error('failed');
       box.innerHTML=`<a href="${data.shareUrl}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Open in Apple / Google Wallet</a>`;
       window.open(data.shareUrl,'_blank');
