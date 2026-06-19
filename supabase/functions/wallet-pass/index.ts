@@ -14,9 +14,9 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
-const WW_KEY = Deno.env.get("WALLETWALLET_KEY") || "";
-const SB_URL = Deno.env.get("SB_URL") || "";
-const SB_SERVICE_KEY = Deno.env.get("SB_SERVICE_KEY") || "";
+const WW_KEY = (Deno.env.get("WALLETWALLET_KEY") || "").trim();
+const SB_URL = (Deno.env.get("SB_URL") || "").trim().replace(/\/+$/, "");
+const SB_SERVICE_KEY = (Deno.env.get("SB_SERVICE_KEY") || "").trim();
 const WW_BASE = "https://api.walletwallet.dev";
 
 const CORS = {
@@ -38,7 +38,7 @@ function passBody(c: { ref: string; full_name: string; stamps: number }) {
   return {
     barcodeValue: c.ref,
     barcodeFormat: "QR",
-    logoText: "",
+    logoText: "Out of Bounds Rewards",
     organizationName: "Out of Bounds Rewards",
     description: "Out of Bounds Rewards loyalty card",
     headerFields: [{
@@ -130,12 +130,18 @@ serve(async (req) => {
         return Response.json({ error: "WalletWallet create failed (check WALLETWALLET_KEY / pass fields)", status: res.status, detail }, { status: 502, headers: CORS });
       }
       const data = await res.json();
-      // store serial + share url
+      const appleUrl = data.applePass || data.applePassUrl || data.appleUrl || null;
+      // store serial + urls
       await sbFetch(`customers?ref=eq.${encodeURIComponent(ref)}`, {
         method: "PATCH",
-        body: JSON.stringify({ pass_serial: data.serialNumber, pass_share_url: data.shareUrl })
+        body: JSON.stringify({ pass_serial: data.serialNumber, pass_share_url: data.shareUrl, pass_apple_url: appleUrl, pass_google_url: data.googleSaveUrl })
       });
-      return Response.json({ shareUrl: data.shareUrl, googleSaveUrl: data.googleSaveUrl, serial: data.serialNumber }, { headers: CORS });
+      return Response.json({
+        shareUrl: data.shareUrl,
+        googleSaveUrl: data.googleSaveUrl,
+        appleUrl: appleUrl,
+        serial: data.serialNumber
+      }, { headers: CORS });
     } else {
       // sync existing pass (full body)
       const res = await fetch(`${WW_BASE}/api/passes/${cust.pass_serial}`, {

@@ -209,23 +209,31 @@ function setAccent(site){
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
 
-// Show an "Add to Apple / Google Wallet" button. If the customer already has a
-// hosted pass page, link straight to it; otherwise mint one on tap via the
-// wallet-pass Edge Function, then open the share page.
+// Render Apple + Google Wallet buttons in-app (no redirect away). Mints the pass
+// via the Edge Function on first tap, then shows both native add buttons in place.
+function walletButtonsHtml(appleUrl, googleUrl){
+  const isApple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+  const apple = appleUrl ? `<a href="${appleUrl}" class="btn" style="--b:#000;--bd:#000;display:block;text-align:center;text-decoration:none;margin-top:8px">  Add to Apple Wallet</a>` : '';
+  const google = googleUrl ? `<a href="${googleUrl}" target="_blank" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-top:8px">  Save to Google Wallet</a>` : '';
+  // show the likely-relevant one first
+  return isApple ? apple + google : google + apple;
+}
 async function renderWalletButton(cust){
   const box=$('#walletbtn'); if(!box) return;
-  if(cust.pass_share_url){
-    box.innerHTML=`<a href="${cust.pass_share_url}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Add to Apple / Google Wallet</a>`;
+  // already minted? show both buttons straight away
+  if(cust.pass_apple_url || cust.pass_google_url || cust.pass_share_url){
+    box.innerHTML = walletButtonsHtml(cust.pass_apple_url, cust.pass_google_url)
+      || `<a href="${cust.pass_share_url}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Add to Apple / Google Wallet</a>`;
     return;
   }
-  box.innerHTML=`<button class="btn ghost" id="mkwallet" style="margin-top:8px">📲 Add to Apple / Google Wallet</button>`;
+  box.innerHTML=`<button class="btn accent" id="mkwallet" style="margin-top:8px">📲 Add to Apple / Google Wallet</button>`;
   $('#mkwallet').onclick=async()=>{
     const b=$('#mkwallet'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
     try{
       const {data,error}=await sb.functions.invoke('wallet-pass',{body:{action:'create',ref:cust.ref}});
-      if(error||!data||!data.shareUrl) throw new Error('failed');
-      box.innerHTML=`<a href="${data.shareUrl}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Open in Apple / Google Wallet</a>`;
-      window.open(data.shareUrl,'_blank');
+      if(error||!data) throw new Error('failed');
+      const html=walletButtonsHtml(data.appleUrl, data.googleSaveUrl);
+      box.innerHTML = html || `<a href="${data.shareUrl}" target="_blank" class="btn accent" style="display:block;text-align:center;text-decoration:none;margin-top:8px">📲 Open in Apple / Google Wallet</a>`;
     }catch(e){
       b.disabled=false; b.textContent='📲 Add to Apple / Google Wallet';
       toast('Could not create your wallet pass just now.','err');
