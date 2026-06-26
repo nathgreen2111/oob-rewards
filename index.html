@@ -128,6 +128,10 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 /* ---------- site picker ---------- */
 .sitegrid{display:grid;gap:11px;margin-top:6px}
 .sitebtn{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:15px;border:1.5px solid var(--line);background:#171933;cursor:pointer;transition:border-color .15s,transform .12s,background .15s;color:#fff;text-align:left;width:100%;font-family:var(--body)}
+.gamegrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.gamebtn{padding:9px 13px;border-radius:11px;border:1.5px solid var(--line);background:#171933;color:#fff;cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;transition:border-color .15s,transform .12s,background .15s}
+.gamebtn:hover{transform:translateY(-1px)}
+.gamebtn.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,#171933);color:#fff}
 .sitebtn:hover{transform:translateY(-2px)}
 .sitebtn.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,#171933)}
 .sitebtn .dot{width:46px;height:46px;border-radius:12px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px;overflow:hidden}
@@ -214,6 +218,13 @@ const SITES = {
               email:'axeperts@theaxefactor.co.uk', address:'Unit SU33, Darwin Centre, Shrewsbury SY1 1BW'},
   xscapenow: {name:'XscapeNow',       short:'Immersive · Telford',       accent:'#E64362', deep:'#CF3C56', tag:'X', logo:'logos/xscapenow.png',
               email:'info@xscapenow.co.uk',        address:'Units 17–19, Ketley Business Park, Telford TF1 5JD'},
+};
+// Rooms per site — used by the staff stamp flow to record which game was played.
+// Edit this list as rooms change. Axe throwing has no rooms (empty array).
+const ROOMS = {
+  levelup:   ['Mystery Manor', 'Operation: Overload', 'Mission: Abducted', 'The Shrewsbury Express'],
+  axefactor: [],
+  xscapenow: ['Sultan\u2019s Secret', 'Step into Wonderland', 'Battleships', 'Runaway Train', 'Oz', 'The Traitor', 'Traitor \u2013 The Race'],
 };
 const GOAL = 6;
 
@@ -522,7 +533,7 @@ async function renderDashboard(justJoined=false){
       const s=SITES[e.site]||{name:e.site};
       const redeem=e.kind==='redeem';
       return `<div class="histrow">
-        <div><div class="hsite">${esc(s.name)}</div><div class="hdate">${fmtDate(e.created_at)}</div></div>
+        <div><div class="hsite">${esc(s.name)}${e.game?` <span class="muted" style="font-weight:500">· ${esc(e.game)}</span>`:''}</div><div class="hdate">${fmtDate(e.created_at)}</div></div>
         <span class="tag ${redeem?'r':'s'}">${redeem?'−£25 redeemed':'+1 stamp'}</span>
       </div>`;}).join('')
      : `<p class="muted small" style="margin:6px 0 0">No visits yet. Show your code at any of our venues to collect your first stamp.</p>`}
@@ -555,7 +566,8 @@ async function renderDashboard(justJoined=false){
     <a href="/privacy" target="_blank" style="color:var(--muted)">Privacy</a> ·
     <a href="#" id="exportdata" style="color:var(--muted)">Download my data</a> ·
     <a href="#" id="deleteacc" style="color:var(--muted)">Delete my account</a>
-  </p>`;
+  </p>
+  <p class="foot" style="margin-top:4px;opacity:.6"><a href="/staff" style="color:var(--muted);text-decoration:none">Staff sign-in</a></p>`;
 
   $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
   if($('#exportdata')) $('#exportdata').onclick=async(ev)=>{
@@ -922,6 +934,10 @@ function showCustomerActions(c){
           <span class="dot" style="background:${s.accent}"><img src="${s.logo}" alt="${esc(s.name)}" onerror="this.style.display='none';this.parentNode.textContent='${s.tag}'"></span>
           <span class="sn">${s.name}</span></button>`).join('')}
       </div>
+      <div id="gamewrap" class="hide" style="margin-top:14px">
+        <label class="fl">Which room?</label>
+        <div class="gamegrid" id="gg"></div>
+      </div>
       <div style="margin-top:14px"><button class="btn accent" id="confirm" disabled>Confirm</button></div>
     </div>
     <div id="err"></div>
@@ -937,7 +953,28 @@ function showCustomerActions(c){
     buzz(40); toast('Last action undone','ok'); window._lastAction=null;
     showCustomerActions(data[0]);
   };
-  let action=null, site=STAFF.site||null;
+  let action=null, site=STAFF.site||null, game=null;
+  // Show the room picker for escape-room sites (stamp action only); axe has none.
+  const showGames=(k)=>{
+    game=null;
+    const gw=$('#gamewrap'), gg=$('#gg');
+    if(!gw||!gg) return;
+    const rooms=(action==='stamp' && ROOMS[k] && ROOMS[k].length) ? ROOMS[k] : [];
+    if(!rooms.length){ gw.classList.add('hide'); gg.innerHTML=''; gateConfirm(); return; }
+    gw.classList.remove('hide');
+    gg.innerHTML=rooms.map(r=>`<button type="button" class="gamebtn" data-game="${esc(r)}">${esc(r)}</button>`).join('');
+    gg.querySelectorAll('.gamebtn').forEach(b=>b.onclick=()=>{
+      gg.querySelectorAll('.gamebtn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel'); game=b.dataset.game; gateConfirm();
+    });
+    gateConfirm();
+  };
+  // Confirm is allowed only when a site is chosen AND (if rooms apply) a room is too.
+  const gateConfirm=()=>{
+    const needsGame = action==='stamp' && site && ROOMS[site] && ROOMS[site].length>0;
+    const ok = !!site && (!needsGame || !!game);
+    if($('#confirm')) $('#confirm').disabled = !ok;
+  };
   const openSite=(act)=>{ action=act;
     $('#sitewrap').classList.remove('hide');
     $('#confirm').textContent= act==='redeem'?'Confirm £25 redemption':'Confirm stamp';
@@ -945,20 +982,20 @@ function showCustomerActions(c){
     if(STAFF.site && SITES[STAFF.site]){
       site=STAFF.site;
       $('#sg').querySelectorAll('.sitebtn').forEach(x=>{ x.classList.toggle('sel', x.dataset.site===STAFF.site); });
-      setAccent(STAFF.site); $('#confirm').disabled=false;
+      setAccent(STAFF.site); showGames(STAFF.site); gateConfirm();
     }
   };
   if($('#addstamp')) $('#addstamp').onclick=()=>openSite('stamp');
   if($('#redeem')) $('#redeem').onclick=()=>openSite('redeem');
   $('#sg')&&$('#sg').querySelectorAll('.sitebtn').forEach(b=>b.onclick=()=>{
     $('#sg').querySelectorAll('.sitebtn').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel'); site=b.dataset.site; setAccent(site); $('#confirm').disabled=false;
+    b.classList.add('sel'); site=b.dataset.site; setAccent(site); showGames(site); gateConfirm();
   });
   if($('#confirm')) $('#confirm').onclick=async()=>{
     if(!site) return;
     const btn=$('#confirm'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
     if(action==='stamp'){
-      const {data,error}=await sb.rpc('staff_add_stamp',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name});
+      const {data,error}=await sb.rpc('staff_add_stamp',{p_pin:STAFF.pin,p_ref:c.ref,p_site:site,p_staff:STAFF.name,p_game:game});
       if(error){ playFail(); buzz([60,40,60]); btn.disabled=false; btn.textContent='Confirm stamp'; $('#err').innerHTML=`<div class="errmsg">${esc(friendly(error.message))}</div>`; return; }
       const updated=data[0];
       if(updated.ready){
@@ -984,6 +1021,7 @@ function friendly(m){
   if(/NOT_READY/.test(m)) return 'Not enough stamps to redeem yet.';
   if(/NO_CUSTOMER/.test(m)) return 'Customer not found.';
   if(/INVALID_PIN/.test(m)) return 'Session expired — please lock and sign in again.';
+  if(/GAME_REQUIRED/.test(m)) return 'Please choose which room they played.';
   return m;
 }
 
