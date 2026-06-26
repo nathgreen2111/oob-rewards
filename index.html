@@ -159,6 +159,34 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 .errmsg{background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:#ffd1d1;padding:12px 14px;border-radius:12px;font-size:13.5px;font-weight:600;margin-top:14px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:26px;letter-spacing:.3px}
+/* ---- Where to collect (venues) ---- */
+.venues-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.venue-list{position:relative;display:flex;flex-direction:column;gap:12px}
+/* signature: a dotted trail threading the three collection points */
+.venue-list::before{content:"";position:absolute;left:40px;top:30px;bottom:30px;width:2px;
+  background:repeating-linear-gradient(var(--muted) 0 3px,transparent 3px 9px);opacity:.35;z-index:0}
+.venue{position:relative;z-index:1;display:flex;align-items:center;gap:14px;padding:13px 14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  border:1px solid var(--line);border-radius:15px;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.venue:hover{transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--vc) 55%,transparent);
+  box-shadow:0 10px 26px -14px var(--vc)}
+.venue-logo{flex:0 0 auto;width:48px;height:48px;border-radius:13px;
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--vc) 38%,#171933),#171933);
+  border:1px solid color-mix(in srgb,var(--vc) 50%,transparent);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--vc) 12%,transparent);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  font-family:var(--display);font-size:19px;color:#fff}
+.venue-logo img{width:100%;height:100%;object-fit:contain;padding:9px}
+.venue-logo.noimg{padding:0}
+.venue-body{flex:1;min-width:0}
+.venue-name{font-family:var(--display);font-size:15px;line-height:1.15;letter-spacing:.2px}
+.venue-addr{color:var(--muted);font-size:12px;line-height:1.5;margin-top:3px}
+.venue-tag{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--vc);background:color-mix(in srgb,var(--vc) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--vc) 35%,transparent);
+  padding:5px 9px;border-radius:8px;white-space:nowrap}
 .staffwrap{}
 .staffwrap .card{border-color:rgba(67,196,178,.25)}
 </style>
@@ -178,6 +206,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-m
 /* ============================================================
    OUT OF BOUNDS REWARDS — app logic
    ============================================================ */
+const CONSENT_VERSION = '2026-06-26';  // bump if Terms/Privacy change
 const SITES = {
   levelup:   {name:'LevelUp Escapes', short:'Escape rooms · Shrewsbury', accent:'#E64362', deep:'#CF3C56', tag:'L', logo:'logos/levelup.png',
               email:'help@levelupescapes.com',     address:'Unit SU33, Darwin Centre, Shrewsbury SY1 1BW'},
@@ -380,8 +409,15 @@ function renderAuth(mode='login'){
       <div class="field"><label class="fl">Email</label><input id="em" type="email" autocomplete="email" placeholder="you@email.com"></div>
       <div class="field"><label class="fl">Password</label><input id="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div>
       <div id="err"></div>
+      <label class="oob-consent" style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px;line-height:1.5;cursor:pointer">
+        <input type="checkbox" id="consent" style="margin-top:3px;flex:0 0 auto;width:18px;height:18px;accent-color:var(--accent)">
+        <span>I'm 18 or over and I agree to the
+          <a href="/terms" target="_blank" style="color:var(--accent)">Terms</a> and
+          <a href="/privacy" target="_blank" style="color:var(--accent)">Privacy Notice</a>.</span>
+      </label>
       <div class="welcome-code">Join today & get <b>5% OFF</b> your next booking</div>
-      <div style="margin-top:16px"><button class="btn accent" id="go">Create my card</button></div>`;
+      <div style="margin-top:16px"><button class="btn accent" id="go" disabled style="opacity:.5">Create my card</button></div>`;
+    $('#consent').onchange=e=>{ const g=$('#go'); g.disabled=!e.target.checked; g.style.opacity=e.target.checked?'1':'.5'; };
     $('#go').onclick=doSignup;
   }
 }
@@ -399,12 +435,13 @@ async function doSignup(){
   const name=$('#nm').value.trim(), email=$('#em').value.trim(), pw=$('#pw').value;
   if(!name||!email||!pw) return authErr('Please fill in every field.');
   if(pw.length<6) return authErr('Password must be at least 6 characters.');
+  if(!$('#consent')||!$('#consent').checked) return authErr('Please agree to the Terms and Privacy Notice to continue.');
   const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
   const {data,error}=await sb.auth.signUp({email,password:pw});
   if(error){ btn.disabled=false; btn.textContent='Create my card'; return authErr(error.message); }
   // if email confirmation is OFF, we have a session now; claim the card.
   if(data.session){
-    await sb.rpc('claim_signup',{p_name:name,p_email:email});
+    await sb.rpc('claim_signup',{p_name:name,p_email:email,p_consent_version:CONSENT_VERSION});
     renderDashboard(true);
   }else{
     app.innerHTML = topBar() + `<div class="card center">
@@ -491,21 +528,59 @@ async function renderDashboard(justJoined=false){
      : `<p class="muted small" style="margin:6px 0 0">No visits yet. Show your code at any of our venues to collect your first stamp.</p>`}
   </div>
 
-  <div class="card">
-    <h3 style="font-size:17px;margin-bottom:12px">Our venues</h3>
-    ${Object.entries(SITES).map(([k,s])=>`
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">
-        <span class="dot" style="width:38px;height:38px;border-radius:10px;background:${s.accent};flex:0 0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="${s.logo}" alt="" style="width:100%;height:100%;object-fit:contain;padding:6px" onerror="this.style.display='none'"></span>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:14px">${esc(s.name)}</div>
-          <div class="small muted" style="line-height:1.5">${esc(s.address)}<br><a href="mailto:${s.email}" style="color:var(--teal);text-decoration:none">${esc(s.email)}</a></div>
+  <div class="card venues">
+    <div class="venues-head">
+      <h3 style="font-size:17px">Where to collect</h3>
+      <span class="small muted">stamps count across all three</span>
+    </div>
+    <div class="venue-list">
+    ${Object.entries(SITES).map(([k,s])=>{
+      const visits=(events||[]).filter(e=>e.site===k&&e.kind==='stamp').length;
+      const label=visits>0?`${visits} ${visits===1?'visit':'visits'}`:'Collect here';
+      return `
+      <div class="venue" style="--vc:${s.accent}">
+        <span class="venue-logo"><img src="${s.logo}" alt="" onerror="this.parentNode.classList.add('noimg');this.parentNode.textContent='${esc(s.name[0])}'"></span>
+        <div class="venue-body">
+          <div class="venue-name">${esc(s.name)}</div>
+          <div class="venue-addr">${esc(s.address)}</div>
         </div>
-      </div>`).join('')}
+        <span class="venue-tag">${label}</span>
+      </div>`;}).join('')}
+    </div>
   </div>
 
-  <p class="foot">Out of Bounds Immersive · LevelUp · The Axe Factor · XscapeNow</p>`;
+  <p class="foot">Out of Bounds Immersive · LevelUp · The Axe Factor · XscapeNow</p>
+  <p class="foot" style="margin-top:8px">
+    <a href="/terms" target="_blank" style="color:var(--muted)">Terms</a> ·
+    <a href="/privacy" target="_blank" style="color:var(--muted)">Privacy</a> ·
+    <a href="#" id="exportdata" style="color:var(--muted)">Download my data</a> ·
+    <a href="#" id="deleteacc" style="color:var(--muted)">Delete my account</a>
+  </p>`;
 
   $('#logout').onclick=async()=>{ await sb.auth.signOut(); renderAuth(); };
+  if($('#exportdata')) $('#exportdata').onclick=async(ev)=>{
+    ev.preventDefault();
+    const {data,error}=await sb.rpc('export_my_data');
+    if(error||!data?.ok){ alert("Sorry — couldn't prepare your data right now. Please email help@levelupescapes.com and we'll send it to you."); return; }
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download='my-out-of-bounds-rewards-data.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  if($('#deleteacc')) $('#deleteacc').onclick=async(ev)=>{
+    ev.preventDefault();
+    if(!confirm("Delete your Out of Bounds Rewards membership?\n\nThis erases your account and any stamps you've collected. It cannot be undone.")) return;
+    if(!confirm("Last check — permanently delete? This can't be reversed.")) return;
+    const {data,error}=await sb.rpc('delete_my_account');
+    if(error||!data?.ok){ alert("Sorry — something went wrong. Please email help@levelupescapes.com and we'll sort it."); return; }
+    // Complete erasure: if they had a wallet pass, revoke it on WalletWallet too.
+    if(data.pass_serial){
+      try{ await sb.functions.invoke('wallet-pass',{body:{action:'revoke',serial:data.pass_serial}}); }
+      catch(e){ /* pass revoke is best-effort; membership is already erased */ }
+    }
+    alert("Your membership has been deleted. Thanks for being part of Out of Bounds Rewards.");
+    await sb.auth.signOut(); localStorage.clear(); renderAuth();
+  };
   // render QR — contains ONLY the ref. Uses the embedded encoder (no CDN dependency).
   renderQR($('#qr'), cust.ref);
   renderWalletButton(cust);
@@ -556,11 +631,11 @@ function renderRedeemPicker(cust){
 /* ============================================================
    STAFF PANEL  (#staff)
    ============================================================ */
-let STAFF = {pin:null, name:null, site:null};
+let STAFF = {pin:null, name:null, site:null, role:null};
 
 function renderStaffGate(){
   setAccent('axefactor');
-  STAFF={pin:null,name:null,site:null};
+  STAFF={pin:null,name:null,site:null,role:null};
   app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="exit">Customer view</button>`) + `
   <div class="card">
     <h2 style="font-size:22px">Team access</h2>
@@ -579,7 +654,7 @@ async function staffLogin(){
   const btn=$('#go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
   const {data,error}=await sb.rpc('staff_login',{p_pin:pin});
   if(error||!data||!data.length){ btn.disabled=false; btn.textContent='Unlock'; $('#err').innerHTML=`<div class="errmsg">PIN not recognised.</div>`; return; }
-  STAFF.pin=pin; STAFF.name=data[0].staff_name; STAFF.site=data[0].staff_site||null;
+  STAFF.pin=pin; STAFF.name=data[0].staff_name; STAFF.site=data[0].staff_site||null; STAFF.role=data[0].staff_role||'staff';
   renderStaffHome();
 }
 
@@ -590,6 +665,7 @@ function renderStaffHome(){
     <div class="small muted" style="letter-spacing:.5px">SIGNED IN AS</div>
     <div style="font-family:var(--display);font-size:22px;margin-top:4px">${esc(STAFF.name)}</div>
     ${STAFF.site&&SITES[STAFF.site]?`<div class="small" style="margin-top:6px;color:${SITES[STAFF.site].accent};font-weight:700">${esc(SITES[STAFF.site].name)}</div>`:''}
+    ${STAFF.role==='manager'?`<div class="small" style="margin-top:6px;display:inline-block;background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow) 40%,transparent);padding:3px 10px;border-radius:7px;font-weight:700;letter-spacing:.5px">MANAGER</div>`:''}
   </div>
   <div class="card">
     <h3 style="font-size:17px;margin-bottom:14px">What do you need to do?</h3>
@@ -601,6 +677,12 @@ function renderStaffHome(){
       <button class="btn ghost" id="soundbtn" style="flex:1">🔊 Sound</button>
     </div>
   </div>
+  ${STAFF.role==='manager'?`<div class="card">
+    <h3 style="font-size:17px;margin-bottom:6px">Manager</h3>
+    <p class="muted small" style="margin:0 0 14px">Tools only managers can see.</p>
+    <button class="btn ghost" id="mgrstaff">👥 Manage staff</button>
+    <button class="btn ghost" id="mgremail">✉️ Email health</button>
+  </div>`:''}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <h3 style="font-size:16px">Recent activity</h3><span class="small muted" id="reccount"></span>
@@ -613,7 +695,101 @@ function renderStaffHome(){
   $('#newc').onclick=renderStaffNewCustomer;
   $('#today').onclick=renderStaffToday;
   $('#soundbtn').onclick=renderSoundSetting;
+  if($('#mgrstaff')) $('#mgrstaff').onclick=renderStaffManage;
+  if($('#mgremail')) $('#mgremail').onclick=()=>{ window.open('/email-health.html','_blank'); };
   loadRecent();
+}
+
+async function renderStaffManage(){
+  if(STAFF.role!=='manager') return renderStaffHome();
+  app.innerHTML = `<div class="staffwrap">` + topBar(`<button class="linkbtn" id="back">Back</button>`) + `
+  <div class="card">
+    <h2 style="font-size:21px">Manage staff</h2>
+    <p class="muted small" style="margin:8px 0 0">Add team members, set their PIN, or deactivate anyone who's left.</p>
+  </div>
+  <div class="card">
+    <h3 style="font-size:16px;margin-bottom:12px">Add a team member</h3>
+    <div class="field"><label class="fl">Name</label><input id="ms_name" placeholder="e.g. Mads"></div>
+    <div class="field"><label class="fl">6-digit PIN</label><input id="ms_pin" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
+    <div class="field"><label class="fl">Role</label>
+      <select id="ms_role"><option value="staff">Staff</option><option value="manager">Manager</option></select></div>
+    <div class="field"><label class="fl">Home site (optional)</label>
+      <select id="ms_site"><option value="">Any site</option>
+        <option value="levelup">LevelUp Escapes</option>
+        <option value="axefactor">The Axe Factor</option>
+        <option value="xscapenow">XscapeNow</option></select></div>
+    <div id="ms_err"></div>
+    <div style="margin-top:14px"><button class="btn accent" id="ms_add">Add team member</button></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="font-size:16px">Team</h3><span class="small muted" id="ms_count"></span>
+    </div>
+    <div id="ms_list"><div class="center" style="padding:14px"><span class="spin"></span></div></div>
+  </div></div>`;
+  $('#back').onclick=renderStaffHome;
+  $('#ms_add').onclick=staffMgrAdd;
+  loadStaffList();
+}
+
+async function loadStaffList(){
+  const box=$('#ms_list'); if(!box) return;
+  const {data,error}=await sb.rpc('staff_list',{p_manager_pin:STAFF.pin});
+  if(error||!data){ box.innerHTML=`<p class="muted small">Couldn't load the team.</p>`; return; }
+  $('#ms_count').textContent=`${data.filter(s=>s.active).length} active`;
+  box.innerHTML=data.map(s=>{
+    const siteName=s.site&&SITES[s.site]?SITES[s.site].name:'Any site';
+    const roleTag=s.role==='manager'?`<span style="color:var(--yellow);font-weight:700">Manager</span>`:'Staff';
+    return `<div class="histrow" style="opacity:${s.active?1:.5}">
+      <div><div class="hsite">${esc(s.name)} ${s.active?'':'<span class="small muted">(inactive)</span>'}</div>
+        <div class="hdate">${roleTag} · ${esc(siteName)}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn ghost" style="padding:6px 10px;font-size:12px" data-pin="${s.id}">PIN</button>
+        <button class="btn ghost" style="padding:6px 10px;font-size:12px;${s.active?'border-color:var(--warn);color:#ffd1d1':''}" data-act="${s.id}" data-to="${s.active?'0':'1'}">${s.active?'Deactivate':'Reactivate'}</button>
+      </div></div>`;
+  }).join('');
+  box.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>staffMgrSetActive(b.dataset.act,b.dataset.to==='1'));
+  box.querySelectorAll('[data-pin]').forEach(b=>b.onclick=()=>staffMgrResetPin(b.dataset.pin));
+}
+
+async function staffMgrAdd(){
+  const name=$('#ms_name').value.trim(), pin=$('#ms_pin').value.trim(),
+        role=$('#ms_role').value, site=$('#ms_site').value||null;
+  const err=$('#ms_err');
+  if(!name) return err.innerHTML=`<div class="errmsg">Enter a name.</div>`;
+  if(!/^[0-9]{6}$/.test(pin)) return err.innerHTML=`<div class="errmsg">PIN must be exactly 6 digits.</div>`;
+  const btn=$('#ms_add'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {data,error}=await sb.rpc('staff_add',{p_manager_pin:STAFF.pin,p_name:name,p_pin:pin,p_role:role,p_site:site});
+  btn.disabled=false; btn.textContent='Add team member';
+  if(error||!data?.ok){ err.innerHTML=`<div class="errmsg">${esc(staffMgrErr(error?.message))}</div>`; return; }
+  $('#ms_name').value=''; $('#ms_pin').value=''; err.innerHTML='';
+  loadStaffList();
+}
+
+async function staffMgrSetActive(id, makeActive){
+  if(!makeActive && !confirm('Deactivate this person? Their PIN will stop working immediately.')) return;
+  const {data,error}=await sb.rpc('staff_set_active',{p_manager_pin:STAFF.pin,p_staff_id:id,p_active:makeActive});
+  if(error||!data?.ok){ alert(staffMgrErr(error?.message)); return; }
+  loadStaffList();
+}
+
+async function staffMgrResetPin(id){
+  const newpin=prompt('New 6-digit PIN for this person:');
+  if(newpin===null) return;
+  if(!/^[0-9]{6}$/.test(newpin.trim())){ alert('PIN must be exactly 6 digits.'); return; }
+  const {data,error}=await sb.rpc('staff_set_pin',{p_manager_pin:STAFF.pin,p_staff_id:id,p_new_pin:newpin.trim()});
+  if(error||!data?.ok){ alert(staffMgrErr(error?.message)); return; }
+  alert('PIN updated.');
+}
+
+function staffMgrErr(m){
+  m=m||'';
+  if(/PIN_TAKEN/.test(m)) return 'That PIN is already in use — pick another.';
+  if(/PIN_FORMAT/.test(m)) return 'PIN must be exactly 6 digits.';
+  if(/LAST_MANAGER/.test(m)) return "You can't deactivate the last manager.";
+  if(/NOT_MANAGER/.test(m)) return 'Manager access required.';
+  if(/BAD_SITE|BAD_ROLE/.test(m)) return 'Invalid role or site.';
+  return 'Something went wrong. Try again.';
 }
 
 async function loadRecent(){
